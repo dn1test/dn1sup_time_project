@@ -38,7 +38,8 @@ projects:
 
 ## Окно статистики
 
-Plugins → **DN1C Time Project 2** → «Статистика времени...»:
+Plugins → **DN1C Time Project 2** → «Статистика времени...» или кнопка-секундомер
+на панели инструментов **DN1C Time Project 2**:
 
 - сводка: файл, сегодня, сессия, всего, статус (активен / бездействие / пауза);
 - вкладка «По дням» — таблица (дата, день недели, время);
@@ -60,6 +61,8 @@ dn1c_time_project2/
   observers.rb           AppObserver (onQuit/onNewModel/onOpenModel), onSaveModel
   config.rb              настройки в реестре SketchUp (read_default/write_default)
   dialog.rb              HtmlDialog статистики
+  icons/timer_16.png     иконка кнопки панели инструментов
+  icons/timer_24.png
   ui/index.html, ui/app.js
   test/test_helper.rb    мини-харнесс (run! / assert / skip)
   test/stats_store_test.rb

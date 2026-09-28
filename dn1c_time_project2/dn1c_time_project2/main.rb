@@ -21,8 +21,11 @@ require 'uri'
 end
 
 module Dn1cTimeProject2
-  VERSION   = '0.1.0'.freeze
+  VERSION   = '0.2.0'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
+
+  TOOLBAR_NAME  = 'DN1C Time Project 2'.freeze
+  CMD_TOOLTIP   = 'DN1C Time Project 2 — статистика времени'.freeze
 
   class << self
     # -- отслеживаемые ресурсы (снимаются в unload!) ---------------------------
@@ -114,6 +117,31 @@ module Dn1cTimeProject2
       menu.add_item('Открыть stats.yaml') { safe { open_stats_file } }
       menu.add_separator
       menu.add_item('О расширении') { about }
+
+      setup_toolbar
+    end
+
+    # Панель инструментов с кнопкой запуска панели статистики.
+    # Тулбар нельзя удалить через API, поэтому кнопка создаётся один раз:
+    # после горячей перезагрузки UI::Toolbar.new возвращает существующую
+    # панель, а блок старой кнопки ссылается на константу модуля, которая
+    # к этому моменту указывает уже на новый код.
+    def setup_toolbar
+      toolbar = UI::Toolbar.new(TOOLBAR_NAME)
+      return if toolbar.any? { |c| c.tooltip == CMD_TOOLTIP }
+
+      cmd = UI::Command.new('Статистика времени') do
+        Dn1cTimeProject2.show_dialog if defined?(Dn1cTimeProject2)
+      end
+      cmd.menu_text = 'Статистика времени...'
+      cmd.tooltip = CMD_TOOLTIP
+      cmd.status_bar_text = 'Открыть окно статистики времени работы'
+      cmd.small_icon = File.join(PLUG_ROOT, 'icons', 'timer_16.png')
+      cmd.large_icon = File.join(PLUG_ROOT, 'icons', 'timer_24.png')
+      toolbar.add_item(cmd)
+      toolbar.restore
+    rescue StandardError => e
+      puts "[TimeProject2] Не удалось создать панель инструментов: #{e.message}"
     end
 
     # Открыть stats.yaml текущего проекта в системном редакторе/браузере
