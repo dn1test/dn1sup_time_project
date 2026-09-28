@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 # =============================================================================
 # dn1c_time_project2/dialog.rb — окно статистики времени (UI::HtmlDialog).
-# Стиль GUI — Modus Bootstrap (дизайн-система Trimble/SketchUp), тёмная тема.
+# Стиль GUI — Modus Bootstrap (дизайн-система Trimble/SketchUp), светлая тема;
+# CSS вендорен в ui/assets/modus-bootstrap.min.css — офлайн без CDN.
 # Разметка: ui/index.html, логика: ui/app.js.
 # Обмен Ruby ↔ JS: один экшен-колбэк 'call_ruby' + execute_script(updateUI).
 # JS сам опрашивает данные раз в 5 с и по кнопке «Обновить».

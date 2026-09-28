@@ -47,7 +47,8 @@ Plugins → **DN1C Time Project 2** → «Статистика времени...
 - выбор проекта из папки, пауза, открытие stats.yaml, порог бездействия;
 - данные обновляются раз в 5 с.
 
-Стиль — Modus Bootstrap (тёмная тема), CSS грузится с CDN — нужен интернет.
+Стиль — Modus Bootstrap (дизайн-система Trimble/SketchUp), светлая тема как у
+штатных диалогов SketchUp. CSS вендорен в `ui/assets/` — работает офлайн.
 
 ## Структура
 
@@ -64,6 +65,7 @@ dn1c_time_project2/
   icons/timer_16.png     иконка кнопки панели инструментов
   icons/timer_24.png
   ui/index.html, ui/app.js
+  ui/assets/             вендоренный modus-bootstrap.min.css
   test/test_helper.rb    мини-харнесс (run! / assert / skip)
   test/stats_store_test.rb
   .sketchup_dev.json     манифест для инструментов MCP (display name, namespace)
