@@ -1,0 +1,27 @@
+# ZCode workspace artifacts
+.zcode/
+
+# Build artifacts
+*.rbz
+
+# Backup files
+*.skb
+AutoSave_*.skp
+Backup of *.layout
+
+# Service files
+_*
+*.zip
+
+# RuboCop
+.rubocop-https-*-yml
+
+# YARD
+/.yardoc
+/doc
+
+# SimpleCov
+/coverage
+
+# Bundler
+Gemfile.lock
