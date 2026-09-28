@@ -34,6 +34,8 @@
   <div class="d-flex gap-2 align-items-center mb-2">
     <button class="btn btn-sm btn-outline-secondary" id="pauseBtn" title="Пауза / продолжить учёт">&#9208; Пауза</button>
     <button class="btn btn-sm btn-outline-secondary" id="folderBtn" title="Показать stats.yaml в папке проекта">&#128193;</button>
+    <label class="text-secondary text-nowrap small ms-auto" for="idle" title="Авто-пауза, если ввода (мышь/клавиатура) нет дольше указанного времени">Порог бездействия, мин:</label>
+    <input type="number" class="form-control form-control-sm" id="idle" min="1" max="240" step="1" style="width:76px" title="Авто-пауза, если ввода нет дольше указанного времени">
   </div>
 
   <ul class="nav nav-tabs">
@@ -61,12 +63,6 @@
     <div class="d-flex align-items-end" style="height:110px" id="weekdaysChart"></div>
     <div class="axis small text-secondary mt-1" id="weekdaysLabels"></div>
     <div class="small text-secondary mt-1">Дни недели, суммарно за всё время</div>
-  </div>
-
-  <div class="d-flex align-items-center gap-2 mt-3 small">
-    <label class="text-secondary text-nowrap" for="idle">Порог бездействия, мин:</label>
-    <input type="number" class="form-control form-control-sm" id="idle" min="1" max="240" step="1" style="width:90px">
-    <span class="text-secondary">пауза, если ввода нет дольше</span>
   </div>
 
   <script src="app.js"></script>
