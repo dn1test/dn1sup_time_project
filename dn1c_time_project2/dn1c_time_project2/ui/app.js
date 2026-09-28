@@ -53,23 +53,6 @@ function renderSummary(data) {
   if (document.activeElement !== idle) idle.value = data.idle_minutes;
 }
 
-function renderProjects(data) {
-  var sel = el('project');
-  var names = data.projects || [];
-  var current = Array.prototype.map.call(sel.options, function (o) { return o.value; }).join('\n');
-  var next = names.join('\n');
-  if (current !== next) {
-    sel.innerHTML = '';
-    names.forEach(function (n) {
-      var opt = document.createElement('option');
-      opt.value = n;
-      opt.textContent = n;
-      sel.appendChild(opt);
-    });
-  }
-  if (data.selected) sel.value = data.selected;
-}
-
 /* ---------------- по дням (таблица) ---------------- */
 
 function renderDays(stats) {
@@ -139,7 +122,6 @@ function renderWeekdays(stats) {
 window.updateUI = function (data) {
   state = data;
   renderSummary(data);
-  renderProjects(data);
   renderDays(data.stats);
   renderHours(data.stats);
   renderWeekdays(data.stats);
@@ -157,10 +139,8 @@ window.addEventListener('load', function () {
     });
   });
 
-  el('refreshBtn').addEventListener('click', function () { callRuby('get_stats'); });
   el('pauseBtn').addEventListener('click', function () { callRuby('toggle_pause'); });
   el('folderBtn').addEventListener('click', function () { callRuby('open_folder'); });
-  el('project').addEventListener('change', function () { callRuby('select_project', el('project').value); });
   el('idle').addEventListener('change', function () { callRuby('set_idle_minutes', el('idle').value); });
 
   setInterval(function () { callRuby('get_stats'); }, 5000);

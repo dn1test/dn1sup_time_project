@@ -85,9 +85,6 @@ module Dn1cTimeProject2
         when 'toggle_pause'
           safe { Tracker.toggle_pause }
           push_data(dlg)
-        when 'select_project'
-          safe { Tracker.ui_project = param.to_s }
-          push_data(dlg)
         when 'set_idle_minutes'
           safe { Tracker.idle_minutes = param.to_f }
           push_data(dlg)

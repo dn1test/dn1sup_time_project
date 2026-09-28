@@ -151,18 +151,13 @@ module Dn1cTimeProject2
       @current_folder ? @store : @unsaved_store
     end
 
-    def ui_project=(name)
-      data = store_data
-      @ui_project = name if data && data['projects'].key?(name)
-    end
-
     def idle_minutes=(value)
       Config.idle_minutes = value
     end
 
     def ui_payload
       data = store_data || StatsStore.fresh_data
-      selected = @ui_project || @current_name || UNSAVED
+      selected = @current_name || UNSAVED
       {
         'status' => status.to_s,
         'paused' => Config.paused?,
@@ -189,7 +184,6 @@ module Dn1cTimeProject2
       @last_tick = nil
       @last_flush = nil
       @status = :off
-      @ui_project = nil
       @attached_models = {}
     end
 
@@ -218,7 +212,6 @@ module Dn1cTimeProject2
       @current_folder = folder
       @current_name = name
       @session_seconds = 0.0
-      @ui_project = nil
       @last_tick = Time.now
       if folder
         @store = StatsStore.load(folder)

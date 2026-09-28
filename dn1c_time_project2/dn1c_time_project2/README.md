@@ -44,7 +44,7 @@ Plugins → **DN1C Time Project 2** → «Статистика времени...
 - сводка: файл, сегодня, сессия, всего, статус (активен / бездействие / пауза);
 - вкладка «По дням» — таблица (дата, день недели, время);
 - «По часам» — 24 столбца; «По дням недели» — 7 столбцов (Пн первый);
-- выбор проекта из папки, пауза, открытие stats.yaml, порог бездействия;
+- пауза учёта, показать stats.yaml в папке проекта, порог бездействия;
 - данные обновляются раз в 5 с.
 
 Стиль — Modus Bootstrap (дизайн-система Trimble/SketchUp), светлая тема как у
@@ -62,6 +62,7 @@ dn1c_time_project2/
   observers.rb           AppObserver (onQuit/onNewModel/onOpenModel), onSaveModel
   config.rb              настройки в реестре SketchUp (read_default/write_default)
   dialog.rb              HtmlDialog статистики
+  win_shell.rb           Проводник: показать stats.yaml (ShellExecuteW)
   icons/timer_16.png     иконка кнопки панели инструментов
   icons/timer_24.png
   ui/index.html, ui/app.js

@@ -16,12 +16,12 @@ rescue LoadError
 end
 require 'uri'
 
-%w[config activity stats_store observers tracker dialog].each do |name|
+%w[config activity stats_store observers tracker dialog win_shell].each do |name|
   require File.join(File.dirname(__FILE__), "#{name}.rb")
 end
 
 module Dn1cTimeProject2
-  VERSION   = '0.2.2'.freeze
+  VERSION   = '0.2.3'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   TOOLBAR_NAME  = 'DN1C Time Project 2'.freeze
@@ -144,7 +144,7 @@ module Dn1cTimeProject2
       puts "[TimeProject2] Не удалось создать панель инструментов: #{e.message}"
     end
 
-    # Открыть stats.yaml текущего проекта в системном редакторе/браузере
+    # Показать stats.yaml текущего проекта в Проводнике (файл выделен)
     def open_stats_file
       folder = Tracker.current_folder
       if folder.nil? || folder.to_s.empty?
@@ -152,8 +152,7 @@ module Dn1cTimeProject2
         return
       end
       path = StatsStore.path_for(folder)
-      url = 'file:///' + URI::DEFAULT_PARSER.escape(path.tr('\\', '/'))
-      UI.openURL(url)
+      UI.messagebox("stats.yaml: #{path}") unless WinShell.reveal(path)
     end
 
     def about
