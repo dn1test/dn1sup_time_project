@@ -11,18 +11,61 @@
 require 'json'
 
 module Dn1cTimeProject2
+  DIALOG_TITLE = 'DN1C Time Project 2 — статистика'.freeze
+
+  # Свёрнутый диалог для visible? «видим», но bring_to_front и show его не
+  # разворачивают — окно остаётся в панели задач и кнопка выглядит мёртвой.
+  # Поднимаем окно вручную через WinAPI (не Windows — no-op).
+  module DialogWindow
+    extend self
+
+    begin
+      require 'fiddle/import'
+
+      module WinAPI
+        extend Fiddle::Importer
+        dlload 'user32.dll'
+        extern 'void* FindWindowW(const void*, const void*)'
+        extern 'int IsIconic(void*)'
+        extern 'int ShowWindow(void*, int)'
+        extern 'int SetForegroundWindow(void*)'
+      end
+
+      SUPPORTED = true
+    rescue LoadError, StandardError
+      SUPPORTED = false
+    end
+
+    SW_RESTORE = 9
+
+    def raise_from_taskbar
+      return unless SUPPORTED
+
+      title = (DIALOG_TITLE + "\0").encode('UTF-16LE')
+      hwnd = WinAPI.FindWindowW(nil, title)
+      return if hwnd.nil? || (hwnd.respond_to?(:null?) && hwnd.null?)
+      return if WinAPI.IsIconic(hwnd).zero?
+
+      WinAPI.ShowWindow(hwnd, SW_RESTORE)
+      WinAPI.SetForegroundWindow(hwnd)
+    rescue StandardError
+      nil
+    end
+  end
+
   class << self
     def show_dialog
       dlg = @dialog
       if dlg && dlg.visible?
         dlg.bring_to_front
+        DialogWindow.raise_from_taskbar
         return dlg
       end
       # Закрытый HtmlDialog повторным show не поднимается — пересоздаём
       # (как в dn1c_menu_screen/settings_dialog.rb)
       dialogs.delete(dlg) if dlg
       dlg = track_dialog(UI::HtmlDialog.new(
-        dialog_title: 'DN1C Time Project 2 — статистика',
+        dialog_title: DIALOG_TITLE,
         preferences_key: 'dn1c_time_project2_dialog',
         width: 480, height: 720,
         resizable: true,
