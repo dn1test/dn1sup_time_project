@@ -36,11 +36,10 @@ function renderSummary(data) {
   badge.textContent = st.text;
   badge.className = 'badge ' + st.cls;
 
-  var file = data.current
-    ? (data.folder ? data.folder + ' \\ ' : '') + data.current
-    : 'Модель не сохранена';
+  var file = data.current || 'Модель не сохранена';
+  var full = data.current && data.folder ? data.folder + ' \\ ' + data.current : file;
   el('file').textContent = file;
-  el('file').title = file;
+  el('file').title = full;
 
   var stats = data.stats;
   el('today').textContent = fmt(stats ? stats.today_seconds : 0);

@@ -12,7 +12,7 @@ require 'fileutils'
 module Dn1cTimeProject2
   module Test
     test 'версия расширения задана' do
-    assert_equal '0.2.4', Dn1cTimeProject2::VERSION
+    assert_equal '0.2.5', Dn1cTimeProject2::VERSION
   end
 
   test 'unload! определён (нужен для ext_reload)' do
