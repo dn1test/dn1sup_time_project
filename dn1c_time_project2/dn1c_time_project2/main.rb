@@ -21,7 +21,7 @@ require 'uri'
 end
 
 module Dn1cTimeProject2
-  VERSION   = '0.2.5'.freeze
+  VERSION   = '0.2.6'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   TOOLBAR_NAME  = 'DN1C Time Project 2'.freeze

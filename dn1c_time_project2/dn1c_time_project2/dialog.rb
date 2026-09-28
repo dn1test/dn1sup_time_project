@@ -11,8 +11,6 @@
 require 'json'
 
 module Dn1cTimeProject2
-  DIALOG_TITLE = 'DN1C Time Project 2 — статистика'.freeze
-
   # Свёрнутый диалог для visible? «видим», но bring_to_front и show его не
   # разворачивают — окно остаётся в панели задач и кнопка выглядит мёртвой.
   # Поднимаем окно вручную через WinAPI (не Windows — no-op).
@@ -41,7 +39,7 @@ module Dn1cTimeProject2
     def raise_from_taskbar
       return unless SUPPORTED
 
-      title = (DIALOG_TITLE + "\0").encode('UTF-16LE')
+      title = (Dn1cTimeProject2.window_title + "\0").encode('UTF-16LE')
       hwnd = WinAPI.FindWindowW(nil, title)
       return if hwnd.nil? || (hwnd.respond_to?(:null?) && hwnd.null?)
       return if WinAPI.IsIconic(hwnd).zero?
@@ -54,6 +52,10 @@ module Dn1cTimeProject2
   end
 
   class << self
+    def window_title
+      "DN1C Time Project 2 v#{VERSION} — статистика"
+    end
+
     def show_dialog
       dlg = @dialog
       if dlg && dlg.visible?
@@ -65,7 +67,7 @@ module Dn1cTimeProject2
       # (как в dn1c_menu_screen/settings_dialog.rb)
       dialogs.delete(dlg) if dlg
       dlg = track_dialog(UI::HtmlDialog.new(
-        dialog_title: DIALOG_TITLE,
+        dialog_title: window_title,
         preferences_key: 'dn1c_time_project2_dialog',
         width: 480, height: 720,
         resizable: true,
