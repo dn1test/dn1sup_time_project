@@ -155,10 +155,14 @@ module Dn1cTimeProject2
       Config.idle_minutes = value
     end
 
+    attr_accessor :selected_project
+
     def ui_payload
       data = store_data || StatsStore.fresh_data
-      selected = @current_name || UNSAVED
+      available = data['projects'].keys
+      selected = @selected_project && available.include?(@selected_project) ? @selected_project : (@current_name || UNSAVED)
       {
+        'version' => Dn1cTimeProject2::VERSION,
         'status' => status.to_s,
         'paused' => Config.paused?,
         'idle_minutes' => Config.idle_minutes,
@@ -167,7 +171,7 @@ module Dn1cTimeProject2
         'session_seconds' => @session_seconds.round(1),
         'today' => Time.now.strftime('%Y-%m-%d'),
         'tick_interval' => TICK_INTERVAL.to_i,
-        'projects' => data['projects'].keys,
+        'projects' => available,
         'selected' => selected,
         'stats' => StatsStore.aggregates(data, selected)
       }

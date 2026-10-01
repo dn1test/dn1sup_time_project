@@ -16,12 +16,12 @@ rescue LoadError
 end
 require 'uri'
 
-%w[config activity stats_store observers tracker dialog win_shell].each do |name|
+%w[config activity stats_store observers tracker dialog win_shell dev_updater].each do |name|
   require File.join(File.dirname(__FILE__), "#{name}.rb")
 end
 
 module Dn1cTimeProject2
-  VERSION   = '0.2.6'.freeze
+  VERSION   = '2.2.6'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   TOOLBAR_NAME  = 'DN1C Time Project 2'.freeze
@@ -116,6 +116,9 @@ module Dn1cTimeProject2
 
       menu.add_item('Открыть stats.yaml') { safe { open_stats_file } }
       menu.add_separator
+      menu.add_item('🔄 Обновить из dev-папки') { safe { update_from_dev } }
+      menu.add_item('⚡ Перезагрузить (Hot Reload)') { safe { hot_reload } }
+      menu.add_separator
       menu.add_item('О расширении') { about }
 
       setup_toolbar
@@ -153,6 +156,16 @@ module Dn1cTimeProject2
       end
       path = StatsStore.path_for(folder)
       UI.messagebox("stats.yaml: #{path}") unless WinShell.reveal(path)
+    end
+
+    def update_from_dev(dev_dir = nil)
+      was_open = @dialog && @dialog.visible?
+      DevUpdater.update_and_reload!(dev_dir: dev_dir, reopen_dialog: was_open, notify: true)
+    end
+
+    def hot_reload
+      DevUpdater.reload!
+      UI.messagebox("⚡ DN1C Time Project 2 v#{VERSION} перезагружен!") if defined?(UI)
     end
 
     def about

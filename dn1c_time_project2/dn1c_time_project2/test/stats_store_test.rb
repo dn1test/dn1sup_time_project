@@ -12,7 +12,7 @@ require 'fileutils'
 module Dn1cTimeProject2
   module Test
     test 'версия расширения задана' do
-    assert_equal '0.2.6', Dn1cTimeProject2::VERSION
+    assert_equal '2.2.6', Dn1cTimeProject2::VERSION
   end
 
   test 'unload! определён (нужен для ext_reload)' do
@@ -211,6 +211,20 @@ module Dn1cTimeProject2
     assert([true, false].include?(Activity.foreground?), 'foreground? не булево')
     assert(Activity.seconds_since_input.is_a?(Numeric), 'seconds_since_input не число')
     assert([true, false].include?(Activity.active?(5)), 'active? не булево')
+  end
+
+  # -- DevUpdater ----------------------------------------------------------------
+
+  test 'DevUpdater определяет путь к папке разработки' do
+    dev_dir = DevUpdater.resolve_dev_dir
+    assert(dev_dir, 'не найден dev_dir')
+    assert(File.exist?(File.join(dev_dir, 'dn1c_time_project2.rb')), 'в dev_dir нет dn1c_time_project2.rb')
+  end
+
+  test 'DevUpdater определяет целевой каталог Plugins' do
+    plugins_dir = DevUpdater.resolve_plugins_dir
+    assert(plugins_dir, 'не определен plugins_dir')
+    assert(Dir.exist?(plugins_dir), 'plugins_dir не существует')
   end
 end
 

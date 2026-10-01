@@ -27,6 +27,7 @@ module Dn1cTimeProject2
 
     def idle_minutes=(value)
       v = value.to_f
+      v = 5.0 if v.nan? || v <= 0.0
       v = 1.0 if v < 1.0
       v = 240.0 if v > 240.0
       Sketchup.write_default(KEY, 'idle_minutes', v)

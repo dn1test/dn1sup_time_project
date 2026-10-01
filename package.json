@@ -1,0 +1,9 @@
+{
+  "name": "dn1c-time-project2",
+  "version": "2.2.6",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev"
+  }
+}

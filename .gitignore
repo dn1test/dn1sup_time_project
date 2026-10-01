@@ -25,3 +25,8 @@ _*
 
 # Bundler
 Gemfile.lock
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
