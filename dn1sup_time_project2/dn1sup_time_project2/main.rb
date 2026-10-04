@@ -18,8 +18,14 @@ rescue LoadError
 end
 require 'uri'
 
-%w[config activity stats_store observers tracker dialog win_shell dev_updater].each do |name|
+%w[config activity stats_store observers tracker dialog win_shell].each do |name|
   require File.join(File.dirname(__FILE__), "#{name}.rb")
+end
+begin
+  dev_file = File.join(File.dirname(__FILE__), "dev_updater.rb")
+  require dev_file if File.file?(dev_file)
+rescue LoadError
+  nil
 end
 
 module Dn1supTimeProject2
@@ -174,11 +180,13 @@ module Dn1supTimeProject2
     end
 
     def update_from_dev(dev_dir = nil)
+      return unless defined?(DevUpdater)
       was_open = @dialog && @dialog.visible?
       DevUpdater.update_and_reload!(dev_dir: dev_dir, reopen_dialog: was_open, notify: true)
     end
 
     def hot_reload
+      return unless defined?(DevUpdater)
       DevUpdater.reload!
       UI.messagebox("⚡ DN1SUP Time Project 2 v#{VERSION} перезагружен!") if defined?(UI)
     end
