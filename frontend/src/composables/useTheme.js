@@ -11,7 +11,7 @@ export function useTheme() {
       document.documentElement.classList.remove('dark')
     }
     try {
-      localStorage.setItem('dn1c_theme', dark ? 'dark' : 'light')
+      localStorage.setItem('dn1sup_theme', dark ? 'dark' : 'light')
     } catch {
       // ignore
     }
@@ -23,7 +23,7 @@ export function useTheme() {
 
   onMounted(() => {
     try {
-      const saved = localStorage.getItem('dn1c_theme')
+      const saved = localStorage.getItem('dn1sup_theme')
       if (saved) {
         applyTheme(saved === 'dark')
       } else {
