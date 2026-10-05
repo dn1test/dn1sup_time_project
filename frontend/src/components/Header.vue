@@ -7,7 +7,7 @@
       </div>
       <div class="flex items-center gap-1.5 min-w-0">
         <h1 class="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100 truncate">
-          Time Project 2
+          Time Project
         </h1>
         <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60 shrink-0">
           {{ versionTag }}
@@ -54,7 +54,7 @@ import { useTheme } from '../composables/useTheme'
 const props = defineProps({
   version: {
     type: String,
-    default: '2.2.7'
+    default: '2.4.0'
   },
   status: {
     type: String,
@@ -69,7 +69,7 @@ const props = defineProps({
 const { isDark, toggleTheme } = useTheme()
 
 const versionTag = computed(() => {
-  if (!props.version) return 'v2.2.7'
+  if (!props.version) return 'v2.4.0'
   return props.version.startsWith('v') ? props.version : `v${props.version}`
 })
 

@@ -38,7 +38,7 @@ module Dn1sup
 end
 
 module Dn1supTimeProject2
-  VERSION   = '2.3.0'.freeze
+  VERSION   = '2.4.0'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1SUP'.freeze # общее меню всех расширений DN1Sup
@@ -146,7 +146,7 @@ module Dn1supTimeProject2
       end
       menu.add_item(cmd_pause)
 
-      menu.add_item('Открыть stats.yaml') { Dn1supTimeProject2.safe { Dn1supTimeProject2.open_stats_file } }
+      menu.add_item('Показать модель в Проводнике') { Dn1supTimeProject2.safe { Dn1supTimeProject2.open_model_file } }
       menu.add_separator
       menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject2.safe { Dn1supTimeProject2.update_from_dev } }
       menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject2.safe { Dn1supTimeProject2.hot_reload } }
@@ -179,15 +179,15 @@ module Dn1supTimeProject2
       puts "[TimeProject2] Не удалось создать панель инструментов: #{e.message}"
     end
 
-    # Показать stats.yaml текущего проекта в Проводнике (файл выделен)
-    def open_stats_file
+    # Показать файл модели в Проводнике (файл выделен)
+    def open_model_file
       folder = Tracker.current_folder
       if folder.nil? || folder.to_s.empty?
-        UI.messagebox('Модель ещё не сохранена — stats.yaml появится в папке проекта после первого сохранения.')
+        UI.messagebox('Модель ещё не сохранена на диск — статистика хранится в файле модели и появится после первого сохранения.')
         return
       end
-      path = StatsStore.path_for(folder)
-      UI.messagebox("stats.yaml: #{path}") unless WinShell.reveal(path)
+      path = File.join(folder, Tracker.current_name.to_s)
+      UI.messagebox("Файл не найден: #{path}") unless File.exist?(path) && WinShell.reveal(path)
     end
 
     def update_from_dev(dev_dir = nil)
@@ -199,14 +199,14 @@ module Dn1supTimeProject2
     def hot_reload
       return unless defined?(DevUpdater)
       DevUpdater.reload!
-      UI.messagebox("⚡ DN1SUP Time Project 2 v#{VERSION} перезагружен!") if defined?(UI)
+      UI.messagebox("⚡ Time Project v#{VERSION} перезагружен!") if defined?(UI)
     end
 
     def about
       UI.messagebox(
-        "DN1SUP Time Project 2 v#{VERSION}\n\n" \
+        "Time Project v#{VERSION}\n\n" \
         "Учёт активного времени работы над проектом.\n" \
-        "Статистика по дням, часам и дням недели в stats.yaml рядом с файлом проекта.\n\n" \
+        "Статистика по дням, часам и дням недели хранится внутри файла модели (.skp).\n\n" \
         "Активным считается время, пока окно SketchUp в фокусе и не истёк порог бездействия (#{Config.idle_minutes} мин)."
       )
     end
@@ -215,7 +215,7 @@ module Dn1supTimeProject2
     def safe
       yield
     rescue StandardError => e
-      UI.messagebox("DN1SUP Time Project 2: #{e.class}: #{e.message}")
+      UI.messagebox("Time Project: #{e.class}: #{e.message}")
     end
   end
 end

@@ -52,7 +52,7 @@ module Dn1supTimeProject2
 
   class << self
     def window_title
-      "DN1SUP Time Project 2 v#{VERSION} — статистика"
+      "Time Project v#{VERSION} — статистика"
     end
 
     def show_dialog
@@ -94,7 +94,7 @@ module Dn1supTimeProject2
           safe { Tracker.selected_project = param.to_s.empty? ? nil : param.to_s }
           push_data(dlg)
         when 'open_folder'
-          safe { open_stats_file }
+          safe { open_model_file }
         when 'update_from_dev'
           safe do
             if defined?(UI) && UI.respond_to?(:start_timer)

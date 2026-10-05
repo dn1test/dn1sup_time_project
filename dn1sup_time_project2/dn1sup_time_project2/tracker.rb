@@ -3,17 +3,26 @@
 # dn1sup_time_project2/tracker.rb — счётчик активного времени.
 #
 # Тик каждые TICK_INTERVAL секунд (UI.start_timer):
-#   1. Определяем текущую модель (папка + имя файла). Сменилась — хвост
-#      интервала дописываем прежнему проекту и переключаем сессию.
+#   1. Определяем текущую модель. Сменилась — хвост интервала дописываем
+#      прежнему проекту и переключаем сессию.
 #   2. Активность = окно SketchUp в фокусе И ввод свежее порога
 #      (Config#idle_minutes, WinAPI через Activity). Иначе тик не начисляется.
 #   3. Активный интервал разбивается по границам часов/суток (segments) и
-#      попадает в бакеты StatsStore.
-# Накопленное сбрасывается в stats.yaml каждые FLUSH_INTERVAL секунд,
-# при смене файла, по onSaveModel, при выходе (AppObserver#onQuit) и в unload!.
+#      попадает в бакеты StatsStore — в памяти текущей модели.
 #
-# Несохранённая модель копится в памяти (@unsaved_store) и переносится
-# в stats.yaml папки при первом сохранении (merge_project!).
+# Хранение — внутри файла модели (атрибут-словарь, см. stats_store.rb):
+#   • при сохранении модели (onSaveModel) статистика всегда пишется в файл;
+#   • при переключении моделей и на выходе (Tracker#stop) — только если
+#     модель уже изменена пользователем: запись атрибута помечает модель
+#     изменённой, и расширение не должно провоцировать лишний вопрос
+#     «Сохранить изменения?» на чистой модели.
+#   • периодического флаша нет: накопленное между сохранениями живёт
+#     в памяти и теряется при крахе так же, как несохранённая работа.
+#
+# Несохранённая модель копится под ключом UNSAVED и переносится под именем
+# файла при первом сохранении (merge_project!). Данные открытых моделей
+# держатся в кэше (@cache), чтобы переключение туда-обратно не теряло
+# несохранённый хвост.
 # =============================================================================
 
 module Dn1supTimeProject2
@@ -21,9 +30,9 @@ module Dn1supTimeProject2
     extend self
 
     TICK_INTERVAL = 30.0
-    FLUSH_INTERVAL = 60.0
     MAX_GAP = 120.0 # разрыв больше этого (сон/зависание) не начисляется
     UNSAVED = 'Без имени (не сохранён)'
+    CACHE_LIMIT = 16 # сколько моделей держать в памяти между переключениями
 
     attr_reader :current_folder, :current_name, :session_seconds
 
@@ -45,7 +54,7 @@ module Dn1supTimeProject2
     end
 
     def stop
-      flush_now
+      persist_if_dirty # хвост дописываем в файл, если модель уже изменена
       if @timer_id
         UI.stop_timer(@timer_id)
         @timer_id = nil
@@ -67,29 +76,34 @@ module Dn1supTimeProject2
       Config.paused?
     end
 
-    # Сохранение модели: безымянную переносим в stats.yaml папки, остальное — flush
+    # Сохранение модели: первый save-as безымянной переносит бакеты UNSAVED
+    # под имя файла, «Сохранить как» — под новое имя. Затем статистика
+    # записывается в файл модели.
     def on_save(model)
       path = model.path.to_s
-      if @current_folder.nil? && !path.empty?
+      return if path.empty?
+
+      folder = File.dirname(path)
+      name = File.basename(path)
+      if folder != @current_folder || name != @current_name
         # доначисляем интервал с последнего тика, чтобы не потерять хвост
         credit(@last_tick, Time.now) if @last_tick && (Time.now - @last_tick) <= MAX_GAP && active_now?
-        folder = File.dirname(path)
-        name = File.basename(path)
-        store = StatsStore.load(folder)
-        moved = StatsStore.merge_project!(@unsaved_store, store, UNSAVED, name)
-        @unsaved_store = StatsStore.fresh_data
+        if @current_folder.nil?
+          moved = StatsStore.merge_project!(@store, @store, UNSAVED, name)
+          puts "[TimeProject2] Модель сохранена как #{name}: перенесено #{moved.round(1)} с" if moved.positive?
+        else
+          StatsStore.merge_project!(@store, @store, @current_name, name)
+          puts "[TimeProject2] Модель сохранена как #{name}: статистика перенесена под новое имя"
+        end
         @current_folder = folder
         @current_name = name
-        @store = store
         @session_seconds = 0.0
         @last_tick = Time.now
-        attach_save_observer(model)
-        StatsStore.save(folder, store)
-        @last_flush = Time.now
-        puts "[TimeProject2] Модель сохранена как #{name}: перенесено #{moved.round(1)} с"
-      else
-        flush_now
       end
+
+      @current_model = model
+      attach_save_observer(model)
+      persist_now
     rescue StandardError => e
       puts "[TimeProject2] Ошибка при сохранении: #{e.class}: #{e.message}"
     end
@@ -102,11 +116,12 @@ module Dn1supTimeProject2
       @last_tick = now
       gap = t0 ? now - t0 : 0.0
 
-      folder, name = identify(Sketchup.active_model)
+      model = Sketchup.active_model
+      folder, name = identify(model)
       if folder != @current_folder || name != @current_name
         # хвост интервала до переключения относится к прежнему проекту
         credit(t0, now) if t0 && gap <= MAX_GAP && active_now?
-        switch_to(folder, name)
+        switch_to(folder, name, model)
         return
       end
 
@@ -121,8 +136,6 @@ module Dn1supTimeProject2
       else
         @status = :idle
       end
-
-      flush_now if @last_flush.nil? || now - @last_flush >= FLUSH_INTERVAL
     rescue StandardError => e
       puts "[TimeProject2] Ошибка тика: #{e.class}: #{e.message}"
     end
@@ -148,7 +161,7 @@ module Dn1supTimeProject2
     end
 
     def store_data
-      @current_folder ? @store : @unsaved_store
+      @store
     end
 
     def idle_minutes=(value)
@@ -180,13 +193,15 @@ module Dn1supTimeProject2
     private
 
     def reset_state
-      @store = nil
-      @unsaved_store = StatsStore.fresh_data
+      @cache = {}
+      @current_key = nil
+      @current_model = nil
       @current_folder = nil
       @current_name = nil
+      @store = nil
+      @store_dirty = false
       @session_seconds = 0.0
       @last_tick = nil
-      @last_flush = nil
       @status = :off
       @attached_models = {}
     end
@@ -209,29 +224,73 @@ module Dn1supTimeProject2
       segments(t0, t1).each do |t, e|
         StatsStore.add_seconds!(data, @current_name, t.strftime('%Y-%m-%d'), t.hour.to_s, e - t)
       end
+      @store_dirty = true
     end
 
-    def switch_to(folder, name)
-      flush_now # дописываем прежний проект, если был
+    def switch_to(folder, name, model)
+      # прежнюю модель дописываем в её файл, если пользователь её уже менял
+      persist_if_dirty
+      cache_put(@current_key, @store, @store_dirty) if @current_key && @store
+
+      @current_model = model
       @current_folder = folder
       @current_name = name
       @session_seconds = 0.0
       @last_tick = Time.now
-      if folder
-        @store = StatsStore.load(folder)
-        attach_save_observer(Sketchup.active_model)
-      else
-        @store = nil
-      end
-      @last_flush = Time.now
+      @current_key = model_key(model)
+      @store, @store_dirty = cache_get(@current_key, model)
+      attach_save_observer(model)
       puts "[TimeProject2] Отслеживание: #{name}#{folder ? " → #{folder}" : ''}"
     end
 
-    def flush_now
-      return unless @current_folder && @store
+    # -- запись статистики в модель ------------------------------------------------
 
-      StatsStore.save(@current_folder, @store)
-      @last_flush = Time.now
+    # Безусловная запись в файл модели — вызывается при сохранении модели.
+    def persist_now
+      return unless @current_model && @store
+
+      if StatsStore.save(@current_model, @store)
+        @store_dirty = false
+        cache_put(@current_key, @store, false) if @current_key
+      end
+    end
+
+    # Запись только если модель уже изменена пользователем — расширение
+    # само не должно помечать «чистую» модель изменённой (иначе при её
+    # закрытии появится лишний вопрос «Сохранить изменения?»).
+    def persist_if_dirty
+      return unless @store_dirty
+      return unless @current_model&.respond_to?(:modified?) && @current_model.modified?
+
+      persist_now
+    rescue StandardError => e
+      puts "[TimeProject2] Не удалось дописать статистику в прежнюю модель: #{e.message}"
+    end
+
+    # -- кэш данных открытых моделей -------------------------------------------------
+
+    def model_key(model)
+      "m#{model.persistent_id}"
+    rescue StandardError
+      "m#{model.object_id}"
+    end
+
+    def cache_get(key, model)
+      entry = @cache[key]
+      return [entry[:data], entry[:dirty]] if entry
+
+      data = StatsStore.load(model)
+      # данные, которых ещё нет в атрибутах модели (импорт из старого
+      # stats.yaml), помечаем несохранёнными — попадут в файл при первом
+      # же сохранении
+      has_attrs = !!model.get_attribute(StatsStore::DICT_NAME, StatsStore::KEY)
+      [data, !has_attrs && data['projects'].any?]
+    end
+
+    def cache_put(key, data, dirty)
+      @cache.delete(key)
+      @cache[key] = { data: data, dirty: dirty }
+      @cache.shift while @cache.size > CACHE_LIMIT
     end
 
     def attach_save_observer(model)

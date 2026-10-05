@@ -11,8 +11,37 @@ require 'fileutils'
 
 module Dn1supTimeProject2
   module Test
+    # Stub модели для тестов хранилища в обычном Ruby (без SketchUp)
+    class FakeModel
+      attr_reader :attrs
+
+      def initialize(path: '')
+        @attrs = {}
+        @path = path
+        @modified = false
+      end
+
+      def path
+        @path
+      end
+
+      def get_attribute(_dict, key)
+        @attrs[key]
+      end
+
+      def set_attribute(_dict, key, value)
+        @attrs[key] = value
+        @modified = true
+        true
+      end
+
+      def modified?
+        @modified
+      end
+    end
+
     test 'версия расширения задана' do
-    assert_equal '2.2.8', Dn1supTimeProject2::VERSION
+    assert_equal '2.4.0', Dn1supTimeProject2::VERSION
   end
 
   test 'unload! определён (нужен для ext_reload)' do
@@ -89,36 +118,77 @@ module Dn1supTimeProject2
     assert_equal({}, data['projects'])
   end
 
-  # -- YAML round-trip и повреждённый файл ----------------------------------------
+  # -- хранение в атрибутах модели (round-trip, битые данные, миграция) ----------
 
-  test 'сохранение и чтение stats.yaml (round-trip, кириллица)' do
+  test 'сохранение и чтение статистики из атрибутов модели (round-trip, кириллица)' do
+    model = FakeModel.new(path: 'U:/проекты/Тест ~ Этаж (2).skp')
+    data = StatsStore.fresh_data
+    StatsStore.add_seconds!(data, 'Тест ~ Этаж (2).skp', '2026-09-28', '9', 1234.5)
+    assert(StatsStore.save(model, data), 'save вернул false')
+    assert(model.attrs['stats'].is_a?(String), 'атрибут stats не строка')
+
+    loaded = StatsStore.load(model)
+    proj = loaded['projects']['Тест ~ Этаж (2).skp']
+    assert(proj, 'проект не прочитан')
+    assert_equal 1234.5, proj['total_seconds']
+    assert_equal({ '9' => 1234.5 }, proj['days']['2026-09-28']['hours'])
+  end
+
+  test 'чтение модели без атрибутов и без stats.yaml даёт пустые данные' do
+    model = FakeModel.new(path: 'U:/пусто/Отдельная.skp')
+    assert_equal({}, StatsStore.load(model)['projects'])
+  end
+
+  test 'битый JSON в атрибутах — данные начинаются с чистого листа' do
+    model = FakeModel.new
+    model.set_attribute(StatsStore::DICT_NAME, StatsStore::KEY, '{ broken')
+    assert_equal({}, StatsStore.load(model)['projects'])
+  end
+
+  test 'первое чтение импортирует секцию из старого stats.yaml' do
     Dir.mktmpdir('tp2test') do |dir|
-      data = StatsStore.fresh_data
-      StatsStore.add_seconds!(data, 'Проект ~ Этаж (2).skp', '2026-09-28', '9', 1234.5)
-      assert(StatsStore.save(dir, data), 'save вернул false')
-      assert(File.exist?(StatsStore.path_for(dir)), 'stats.yaml не создан')
-
-      loaded = StatsStore.load(dir)
-      proj = loaded['projects']['Проект ~ Этаж (2).skp']
-      assert(proj, 'проект не прочитан')
+      skp = File.join(dir, 'Проект.skp')
+      File.write(File.join(dir, 'stats.yaml'), <<~YAML)
+        projects:
+          "Проект.skp":
+            total_seconds: 1234.5
+            first_seen: "2026-09-01"
+            last_seen: "2026-09-28"
+            days:
+              "2026-09-28":
+                seconds: 1234.5
+                hours:
+                  "14": 1234.5
+      YAML
+      loaded = StatsStore.load(FakeModel.new(path: skp))
+      proj = loaded['projects']['Проект.skp']
+      assert(proj, 'секция из stats.yaml не импортирована')
       assert_equal 1234.5, proj['total_seconds']
-      assert_equal({ '9' => 1234.5 }, proj['days']['2026-09-28']['hours'])
+      assert_equal({ '14' => 1234.5 }, proj['days']['2026-09-28']['hours'])
+      assert(File.exist?(File.join(dir, 'stats.yaml')), 'старый stats.yaml не должен удаляться')
     end
   end
 
-  test 'чтение несуществующей папки даёт пустые данные' do
+  test 'битый старый stats.yaml не мешает чтению' do
     Dir.mktmpdir('tp2test') do |dir|
-      assert_equal({}, StatsStore.load(dir)['projects'])
-    end
-  end
-
-  test 'битый YAML уходит в бэкап, данные начинаются с чистого листа' do
-    Dir.mktmpdir('tp2test') do |dir|
-      File.write(StatsStore.path_for(dir), '{ broken: [')
-      loaded = StatsStore.load(dir)
+      File.write(File.join(dir, 'stats.yaml'), '{ broken: [')
+      loaded = StatsStore.load(FakeModel.new(path: File.join(dir, 'a.skp')))
       assert_equal({}, loaded['projects'])
-      backups = Dir.glob(File.join(dir, 'stats.yaml.broken-*'))
-      assert_equal 1, backups.size, 'бэкап битого файла не создан'
+    end
+  end
+
+  test 'чужие проекты из stats.yaml не попадают в модель' do
+    Dir.mktmpdir('tp2test') do |dir|
+      File.write(File.join(dir, 'stats.yaml'), <<~YAML)
+        projects:
+          "другой.skp":
+            total_seconds: 99.0
+            first_seen: "2026-09-01"
+            last_seen: "2026-09-01"
+            days: {}
+      YAML
+      loaded = StatsStore.load(FakeModel.new(path: File.join(dir, 'a.skp')))
+      assert_equal({}, loaded['projects'])
     end
   end
 

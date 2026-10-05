@@ -1,31 +1,43 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/stats_store.rb — хранение статистики в stats.yaml рядом
-# с файлом проекта. Один файл на папку, секции по каждому .skp:
+# dn1sup_time_project2/stats_store.rb — хранение статистики ВНУТРИ файла
+# модели (.skp) в атрибут-словаре. Внешние файлы статистики не создаются.
 #
-#   projects:
-#     "Проект.skp":
-#       total_seconds: 12345.6
-#       first_seen: "2026-09-01"
-#       last_seen: "2026-09-28"
-#       days:
-#         "2026-09-28":
-#           seconds: 7200.5
-#           hours: { "14": 3600.0, "15": 3600.5 }
+#   model.get_attribute('dn1sup_time_project2', 'stats')
+#   => JSON-строка:
+#   { "projects": {
+#       "Проект.skp": {
+#         "total_seconds": 12345.6,
+#         "first_seen": "2026-09-01",
+#         "last_seen": "2026-09-28",
+#         "days": { "2026-09-28": { "seconds": 7200.5,
+#                                   "hours": { "14": 3600.0, "15": 3600.5 } } }
+#       } } }
 #
 # День недели не хранится — вычисляется из даты. Все ключи после загрузки
-# нормализуются к строкам, числа к Float. Запись атомарная (tmp + rename),
-# битый файл уходит в бэкап *.broken-*.
+# нормализуются к строкам, числа к Float.
+#
+# ВАЖНО: запись атрибута помечает модель изменённой и создаёт шаг undo,
+# поэтому save вызывается только при сохранении модели или когда модель
+# уже изменена пользователем (см. Tracker#persist_if_dirty).
+#
+# Миграция: если в модели атрибутов ещё нет, при первом чтении секция
+# переносится из старого stats.yaml папки (файл только читается — не
+# удаляется и не переписывается).
 # =============================================================================
 
-require 'yaml'
+require 'json'
+require 'yaml' # только для чтения старых stats.yaml при миграции
 require 'date'
 
 module Dn1supTimeProject2
   module StatsStore
     extend self
 
-    FILE_NAME = 'stats.yaml'
+    DICT_NAME = 'dn1sup_time_project2'
+    KEY = 'stats'
+    LEGACY_FILE_NAME = 'stats.yaml'
+    OPERATION_NAME = 'Статистика времени'
     WD_RU = %w[Воскресенье Понедельник Вторник Среда Четверг Пятница Суббота].freeze
 
     def fresh_data
@@ -36,38 +48,39 @@ module Dn1supTimeProject2
       { 'total_seconds' => 0.0, 'first_seen' => nil, 'last_seen' => nil, 'days' => {} }
     end
 
-    def path_for(folder)
-      File.join(folder, FILE_NAME)
-    end
-
-    # Чтение stats.yaml папки
-    def load(folder)
-      path = path_for(folder)
-      return fresh_data unless File.exist?(path)
-
-      data = YAML.safe_load(File.read(path, encoding: 'UTF-8'), permitted_classes: [Date, Time])
-      data.is_a?(Hash) ? normalize(data) : fresh_data
-    rescue StandardError => e
-      backup_path = "#{path}.broken-#{Time.now.strftime('%Y%m%d-%H%M%S')}"
-      begin
-        File.rename(path, backup_path)
-      rescue StandardError
-        nil
+    # Чтение статистики из файла модели; пустая модель — импорт из старого stats.yaml
+    def load(model)
+      raw = model.get_attribute(DICT_NAME, KEY)
+      if raw.is_a?(String) && !raw.empty?
+        data = JSON.parse(raw)
+        return data.is_a?(Hash) ? normalize(data) : fresh_data
       end
-      puts "[TimeProject2] stats.yaml не прочитан (#{e.message}); файл сохранён как #{File.basename(backup_path)}"
+      legacy_import(model)
+    rescue StandardError => e
+      puts "[TimeProject2] Статистика в файле модели не прочитана (#{e.message}); начинаю с нуля"
       fresh_data
     end
 
-    # Атомарная запись: временный файл + rename
-    def save(folder, data)
-      path = path_for(folder)
-      tmp = "#{path}.tmp"
-      File.open(tmp, 'w:UTF-8') { |f| f.write(YAML.dump(round_data(data))) }
-      File.delete(path) if File.exist?(path)
-      File.rename(tmp, path)
+    # Запись статистики в атрибуты модели одной JSON-строкой.
+    # См. шапку файла: помечает модель изменённой — вызывать только
+    # при сохранении модели или если модель уже изменена пользователем.
+    def save(model, data)
+      json = JSON.generate(round_data(data))
+      in_op = false
+      if model.respond_to?(:start_operation) && model.respond_to?(:commit_operation)
+        model.start_operation(OPERATION_NAME, true)
+        in_op = true
+      end
+      model.set_attribute(DICT_NAME, KEY, json)
+      model.commit_operation if in_op
       true
     rescue StandardError => e
-      puts "[TimeProject2] Не удалось записать #{path}: #{e.message}"
+      begin
+        model.abort_operation if in_op && model.respond_to?(:abort_operation)
+      rescue StandardError
+        nil
+      end
+      puts "[TimeProject2] Не удалось записать статистику в файл модели: #{e.message}"
       false
     end
 
@@ -88,7 +101,8 @@ module Dn1supTimeProject2
     end
 
     # Перенос всех бакетов проекта from (src_data) в проект to (dst_data) —
-    # для безымянной модели, сохранённой впервые. Возвращает перенесённые секунды.
+    # для безымянной модели, сохранённой впервые, и при «Сохранить как».
+    # Возвращает перенесённые секунды.
     def merge_project!(src_data, dst_data, from, to)
       src = src_data['projects'][from]
       return 0.0 unless src
@@ -132,7 +146,7 @@ module Dn1supTimeProject2
       }
     end
 
-    # Приведение прочитанного YAML к каноническому виду (строки/Float)
+    # Приведение прочитанных данных к каноническому виду (строки/Float)
     def normalize(data)
       fresh = fresh_data
       projects = data['projects'].is_a?(Hash) ? data['projects'] : {}
@@ -169,6 +183,29 @@ module Dn1supTimeProject2
     end
 
     private
+
+    # Одноразовый импорт секции этого файла из старого stats.yaml папки.
+    # Старый файл только читается: не удаляется и не переписывается.
+    def legacy_import(model)
+      path = model.path.to_s
+      return fresh_data if path.empty?
+
+      yaml_path = File.join(File.dirname(path), LEGACY_FILE_NAME)
+      return fresh_data unless File.exist?(yaml_path)
+
+      raw = YAML.safe_load(File.read(yaml_path, encoding: 'UTF-8'), permitted_classes: [Date, Time])
+      projects = raw.is_a?(Hash) ? raw['projects'] : nil
+      section = projects.is_a?(Hash) ? projects[File.basename(path)] : nil
+      return fresh_data unless section.is_a?(Hash)
+
+      data = fresh_data
+      data['projects'][File.basename(path)] = section
+      puts "[TimeProject2] Статистика импортирована из #{LEGACY_FILE_NAME} в файл модели (#{File.basename(path)})"
+      normalize(data)
+    rescue StandardError => e
+      puts "[TimeProject2] Старый #{LEGACY_FILE_NAME} не прочитан (#{e.message})"
+      fresh_data
+    end
 
     def float_or_zero(v)
       v.is_a?(Numeric) ? v.to_f : v.to_s.to_f
