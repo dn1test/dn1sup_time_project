@@ -19,7 +19,7 @@ Sketchup.extensions.each { |e| _registered = true if e.name == "DN1SUP Time Proj
 unless _registered
   ext = SketchupExtension.new("DN1SUP Time Project 2", File.join('dn1sup_time_project2', 'main'))
   ext.description = "Учёт активного времени работы над проектом: статистика по дням, часам и дням недели"
-  ext.version     = '2.2.8'
+  ext.version     = '2.3.0'
   ext.creator     = "DN1Sup"
   ext.copyright   = '2026, DN1Sup'
   Sketchup.register_extension(ext, true) # true = загружать при старте SketchUp
