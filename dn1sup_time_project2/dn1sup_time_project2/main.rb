@@ -28,6 +28,15 @@ rescue LoadError
   nil
 end
 
+module Dn1sup
+  def self.common_menu
+    @common_menu ||= begin
+      legacy = (defined?($dn1sup_common_menu) && $dn1sup_common_menu) || (defined?($dn1sup_menu) && $dn1sup_menu)
+      legacy || UI.menu('Extensions').add_submenu('DN1SUP')
+    end
+  end
+end
+
 module Dn1supTimeProject2
   VERSION   = '2.3.0'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
@@ -109,19 +118,15 @@ module Dn1supTimeProject2
     # (глобалы переживают remove_const и чистку $LOADED_FEATURES), а все
     # пункты вызывают Dn1supTimeProject2.* через константу — после
     # перезагрузки они dispatch-атся уже в новый код, как и кнопка тулбара.
-    # $dn1sup_common_menu — общее соглашение для всех расширений DN1Sup:
-    # меню «Extensions > DN1SUP» создаёт первое загрузившееся расширение,
-    # остальные переиспользуют (в $dn1sup_menu дублируется ссылка — старое
-    # соглашение Comp Add View). Своё подменю охраняет $dn1sup_tp2_menu —
-    # если общее меню уже создал другой extension, свои пункты всё равно
-    # добавляются.
+    # Меню «Extensions > DN1SUP» создаётся первым загрузившимся расширением
+    # через Dn1sup.common_menu без глобальных переменных. Своё подменю создаётся один раз.
     def setup_ui
-      return if $dn1sup_tp2_menu
+      return if @menu_created || (defined?(Dn1sup) && Dn1sup.instance_variable_get(:@tp2_menu))
 
-      common = $dn1sup_common_menu || $dn1sup_menu
-      common ||= UI.menu('Extensions').add_submenu(COMMON_MENU)
-      $dn1sup_common_menu = $dn1sup_menu = common
-      menu = $dn1sup_tp2_menu = common.add_submenu(MENU_NAME)
+      common = Dn1sup.common_menu
+      menu = common.add_submenu(MENU_NAME)
+      @menu_created = true
+      Dn1sup.instance_variable_set(:@tp2_menu, menu) if defined?(Dn1sup)
 
       cmd_stats = UI::Command.new('Статистика времени...') do
         Dn1supTimeProject2.safe { Dn1supTimeProject2.show_dialog }
