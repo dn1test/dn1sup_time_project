@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/test/test_helper.rb — мини-харнесс тестов «DN1SUP Time Project 2».
+# dn1sup_time_project2/test/test_helper.rb — мини-харнесс тестов «DN1Sup Time Project 2».
 #
 # Работает в двух средах:
 #   • внутри SketchUp — запуск через ext_test MCP-сервера sketchup-dev

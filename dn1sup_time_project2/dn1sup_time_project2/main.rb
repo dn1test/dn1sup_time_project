@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/main.rb — основная логика расширения «DN1SUP Time Project 2».
+# dn1sup_time_project2/main.rb — основная логика расширения «DN1Sup Time Project 2».
 #
 # Код рассчитан на горячую перезагрузку (ext_reload MCP-сервера sketchup-dev):
 #   • таймеры/наблюдатели/диалоги регистрируются через track_* и снимаются
@@ -32,20 +32,20 @@ module Dn1sup
   def self.common_menu
     @common_menu ||= begin
       legacy = (defined?($dn1sup_common_menu) && $dn1sup_common_menu) || (defined?($dn1sup_menu) && $dn1sup_menu)
-      legacy || UI.menu('Extensions').add_submenu('DN1SUP')
+      legacy || UI.menu('Extensions').add_submenu('DN1Sup')
     end
   end
 end
 
 module Dn1supTimeProject2
-  VERSION   = '2.4.0'.freeze
+  VERSION   = '2.4.1'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
-  COMMON_MENU  = 'DN1SUP'.freeze # общее меню всех расширений DN1Sup
+  COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
   MENU_NAME    = 'Time Project 2'.freeze # подменю расширения внутри COMMON_MENU
 
-  TOOLBAR_NAME  = 'DN1SUP Time Project 2'.freeze
-  CMD_TOOLTIP   = 'DN1SUP Time Project 2 — статистика времени'.freeze
+  TOOLBAR_NAME  = 'DN1Sup Time Project 2'.freeze
+  CMD_TOOLTIP   = 'DN1Sup Time Project 2 — статистика времени'.freeze
 
   class << self
     # -- отслеживаемые ресурсы (снимаются в unload!) ---------------------------
@@ -114,11 +114,11 @@ module Dn1supTimeProject2
     # Меню и панель инструментов создаются один раз на сессию SketchUp:
     # UI::Menu в современных версиях не имеет API удаления (remove_item
     # отсутствует), и пересоздание при горячей перезагрузке накопило бы
-    # дубли. Ссылка на общее меню DN1SUP живёт в глобальной переменной
+    # дубли. Ссылка на общее меню DN1Sup живёт в глобальной переменной
     # (глобалы переживают remove_const и чистку $LOADED_FEATURES), а все
     # пункты вызывают Dn1supTimeProject2.* через константу — после
     # перезагрузки они dispatch-атся уже в новый код, как и кнопка тулбара.
-    # Меню «Extensions > DN1SUP» создаётся первым загрузившимся расширением
+    # Меню «Extensions > DN1Sup» создаётся первым загрузившимся расширением
     # через Dn1sup.common_menu без глобальных переменных. Своё подменю создаётся один раз.
     def setup_ui
       return if @menu_created || (defined?(Dn1sup) && Dn1sup.instance_variable_get(:@tp2_menu))

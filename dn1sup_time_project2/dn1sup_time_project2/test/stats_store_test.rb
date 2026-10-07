@@ -41,7 +41,7 @@ module Dn1supTimeProject2
     end
 
     test 'версия расширения задана' do
-    assert_equal '2.4.0', Dn1supTimeProject2::VERSION
+    assert_equal '2.4.1', Dn1supTimeProject2::VERSION
   end
 
   test 'unload! определён (нужен для ext_reload)' do

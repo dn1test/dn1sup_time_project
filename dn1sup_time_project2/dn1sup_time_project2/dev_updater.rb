@@ -239,7 +239,7 @@ module Dn1supTimeProject2
       end
 
       if notify && defined?(UI)
-        msg = "✅ DN1SUP Time Project 2 (v#{res[:version]}) успешно обновлен из dev-папки!\n\n" \
+        msg = "✅ DN1Sup Time Project 2 (v#{res[:version]}) успешно обновлен из dev-папки!\n\n" \
               "Откуда: #{res[:dev_dir]}\n" \
               "Куда: #{res[:plugins_dir]}\n" \
               "Скопировано файлов: #{res[:files_copied]}"
