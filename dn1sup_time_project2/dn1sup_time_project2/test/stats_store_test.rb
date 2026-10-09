@@ -40,8 +40,9 @@ module Dn1supTimeProject2
       end
     end
 
-    test 'версия расширения задана' do
-    assert_equal '0.4.1', Dn1supTimeProject2::VERSION
+    test 'версия расширения задана (semver)' do
+    assert(Dn1supTimeProject2::VERSION.to_s.match?(/\A\d+\.\d+\.\d+\z/),
+           "версия не semver: #{Dn1supTimeProject2::VERSION}")
   end
 
   test 'unload! определён (нужен для ext_reload)' do

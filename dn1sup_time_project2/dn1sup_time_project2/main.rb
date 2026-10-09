@@ -28,6 +28,17 @@ rescue LoadError
   nil
 end
 
+# Общий модуль автообновления dn1sup_updater.rb кладётся в пакет при упаковке
+# (tools/pack.rb); в dev-копии его нет. LoadError не наследуется от
+# StandardError — ловим явно (SU2026+ пробрасывает).
+if defined?(Sketchup) && Sketchup.respond_to?(:require)
+  begin
+    Sketchup.require 'dn1sup_time_project2/dn1sup_updater'
+  rescue LoadError, StandardError
+    nil
+  end
+end
+
 module Dn1sup
   def self.common_menu
     @common_menu ||= begin
@@ -38,7 +49,7 @@ module Dn1sup
 end
 
 module Dn1supTimeProject2
-  VERSION   = '0.4.1'.freeze
+  VERSION   = '0.5.0'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
@@ -46,6 +57,12 @@ module Dn1supTimeProject2
 
   TOOLBAR_NAME  = 'DN1Sup Time Project 2'.freeze
   CMD_TOOLTIP   = 'DN1Sup Time Project 2 — статистика времени'.freeze
+
+  ID       = 'dn1sup_time_project2'.freeze
+  REPO     = 'dn1test/dn1sup_time_project2'.freeze
+  ASSET    = "#{ID}.rbz".freeze
+  PAGE_URL = "https://github.com/#{REPO}/releases".freeze
+  MANIFEST = { id: ID, repo: REPO, version: VERSION, asset: ASSET }.freeze
 
   class << self
     # -- отслеживаемые ресурсы (снимаются в unload!) ---------------------------
@@ -148,12 +165,39 @@ module Dn1supTimeProject2
 
       menu.add_item('Показать модель в Проводнике') { Dn1supTimeProject2.safe { Dn1supTimeProject2.open_model_file } }
       menu.add_separator
+      menu.add_item('Проверить обновления сейчас') do
+        Dn1supTimeProject2.safe do
+          if defined?(Dn1sup::Updater)
+            Dn1sup::Updater.check!(Dn1supTimeProject2::MANIFEST.merge(force: true, async: true))
+          else
+            UI.openURL(Dn1supTimeProject2::PAGE_URL)
+          end
+        end
+      end
+      menu.add_item('Страница релизов на GitHub') { UI.openURL(Dn1supTimeProject2::PAGE_URL) }
+      menu.add_separator
       menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject2.safe { Dn1supTimeProject2.update_from_dev } }
       menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject2.safe { Dn1supTimeProject2.hot_reload } }
       menu.add_separator
       menu.add_item('О расширении') { Dn1supTimeProject2.about }
 
+      schedule_update_check
       setup_toolbar
+    end
+
+    # Фоновая проверка обновлений один раз за сессию (не раньше 15 секунд,
+    # чтобы не мешать загрузке SketchUp). Таймер отслеживается и снимается
+    # в unload!.
+    def schedule_update_check
+      return if $dn1sup_tp2_update_check_scheduled
+      return unless defined?(Dn1sup::Updater) && defined?(UI) && UI.respond_to?(:start_timer)
+
+      $dn1sup_tp2_update_check_scheduled = true
+      track_timer(UI.start_timer(15, false) do
+        Dn1sup::Updater.check!(Dn1supTimeProject2::MANIFEST.merge(async: true))
+      end)
+    rescue StandardError
+      nil
     end
 
     # Панель инструментов с кнопкой запуска панели статистики.
