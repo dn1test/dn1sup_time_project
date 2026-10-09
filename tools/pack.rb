@@ -16,10 +16,10 @@ require 'tmpdir'
 require 'zlib'
 
 CONFIG = {
-  id:         'dn1sup_time_project2',
-  loader:     'dn1sup_time_project2/dn1sup_time_project2.rb',
-  dir:        'dn1sup_time_project2/dn1sup_time_project2',
-  target_dir: 'dn1sup_time_project2'
+  id:         'dn1sup_time_project',
+  loader:     'dn1sup_time_project/dn1sup_time_project.rb',
+  dir:        'dn1sup_time_project/dn1sup_time_project',
+  target_dir: 'dn1sup_time_project'
 }.freeze
 
 EXCLUDE_FILES = %w[

@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/win_shell.rb — открытие файлов средствами Windows.
+# dn1sup_time_project/win_shell.rb — открытие файлов средствами Windows.
 # UI.openURL не открывает file:// URL (возвращает false), поэтому Проводник
 # запускаем через ShellExecuteW (не Windows — no-op).
 # =============================================================================
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module WinShell
     extend self
 

@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/stats_store.rb — хранение статистики ВНУТРИ файла
+# dn1sup_time_project/stats_store.rb — хранение статистики ВНУТРИ файла
 # модели (.skp) в атрибут-словаре. Внешние файлы статистики не создаются.
 #
-#   model.get_attribute('dn1sup_time_project2', 'stats')
+#   model.get_attribute('dn1sup_time_project', 'stats')
 #   => JSON-строка:
 #   { "projects": {
 #       "Проект.skp": {
@@ -30,11 +30,12 @@ require 'json'
 require 'yaml' # только для чтения старых stats.yaml при миграции
 require 'date'
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module StatsStore
     extend self
 
-    DICT_NAME = 'dn1sup_time_project2'
+    DICT_NAME = 'dn1sup_time_project'
+    LEGACY_DICT_NAME = 'dn1sup_time_project2' # словарь до переименования расширения
     KEY = 'stats'
     LEGACY_FILE_NAME = 'stats.yaml'
     OPERATION_NAME = 'Статистика времени'
@@ -51,13 +52,16 @@ module Dn1supTimeProject2
     # Чтение статистики из файла модели; пустая модель — импорт из старого stats.yaml
     def load(model)
       raw = model.get_attribute(DICT_NAME, KEY)
+      # модели, сохранённые до переименования расширения: читаем старый словарь,
+      # при следующем сохранении данные запишутся уже под новый ключ
+      raw = model.get_attribute(LEGACY_DICT_NAME, KEY) unless raw.is_a?(String) && !raw.empty?
       if raw.is_a?(String) && !raw.empty?
         data = JSON.parse(raw)
         return data.is_a?(Hash) ? normalize(data) : fresh_data
       end
       legacy_import(model)
     rescue StandardError => e
-      puts "[TimeProject2] Статистика в файле модели не прочитана (#{e.message}); начинаю с нуля"
+      puts "[TimeProject] Статистика в файле модели не прочитана (#{e.message}); начинаю с нуля"
       fresh_data
     end
 
@@ -80,7 +84,7 @@ module Dn1supTimeProject2
       rescue StandardError
         nil
       end
-      puts "[TimeProject2] Не удалось записать статистику в файл модели: #{e.message}"
+      puts "[TimeProject] Не удалось записать статистику в файл модели: #{e.message}"
       false
     end
 
@@ -200,10 +204,10 @@ module Dn1supTimeProject2
 
       data = fresh_data
       data['projects'][File.basename(path)] = section
-      puts "[TimeProject2] Статистика импортирована из #{LEGACY_FILE_NAME} в файл модели (#{File.basename(path)})"
+      puts "[TimeProject] Статистика импортирована из #{LEGACY_FILE_NAME} в файл модели (#{File.basename(path)})"
       normalize(data)
     rescue StandardError => e
-      puts "[TimeProject2] Старый #{LEGACY_FILE_NAME} не прочитан (#{e.message})"
+      puts "[TimeProject] Старый #{LEGACY_FILE_NAME} не прочитан (#{e.message})"
       fresh_data
     end
 

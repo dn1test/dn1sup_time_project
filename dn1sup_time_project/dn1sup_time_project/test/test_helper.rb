@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/test/test_helper.rb — мини-харнесс тестов «DN1Sup Time Project 2».
+# dn1sup_time_project/test/test_helper.rb — мини-харнесс тестов «DN1Sup Time Project».
 #
 # Работает в двух средах:
 #   • внутри SketchUp — запуск через ext_test MCP-сервера sketchup-dev
@@ -13,9 +13,9 @@
 # перезапускать сколько угодно (run! сам очищает список).
 # =============================================================================
 
-require_relative '../main' unless defined?(Dn1supTimeProject2::VERSION)
+require_relative '../main' unless defined?(Dn1supTimeProject::VERSION)
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module Test
     class Failure < StandardError; end
     class Skip    < StandardError; end

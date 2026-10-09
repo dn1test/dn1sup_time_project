@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/dialog.rb — окно статистики времени (UI::HtmlDialog).
+# dn1sup_time_project/dialog.rb — окно статистики времени (UI::HtmlDialog).
 # Стиль GUI — Vue 3 + Tailwind CSS (Vite singlefile bundle), тёмная/светлая тема.
 # Разметка и логика: ui/index.html (собран из frontend/).
 # Обмен Ruby ↔ JS: один экшен-колбэк 'call_ruby' + execute_script(updateUI).
@@ -9,7 +9,7 @@
 
 require 'json'
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   # Свёрнутый диалог для visible? «видим», но bring_to_front и show его не
   # разворачивают — окно остаётся в панели задач и кнопка выглядит мёртвой.
   # Поднимаем окно вручную через WinAPI (не Windows — no-op).
@@ -38,7 +38,7 @@ module Dn1supTimeProject2
     def raise_from_taskbar
       return unless SUPPORTED
 
-      title = (Dn1supTimeProject2.window_title + "\0").encode('UTF-16LE')
+      title = (Dn1supTimeProject.window_title + "\0").encode('UTF-16LE')
       hwnd = WinAPI.FindWindowW(nil, title)
       return if hwnd.nil? || (hwnd.respond_to?(:null?) && hwnd.null?)
       return if WinAPI.IsIconic(hwnd).zero?
@@ -67,7 +67,7 @@ module Dn1supTimeProject2
       dialogs.delete(dlg) if dlg
       dlg = track_dialog(UI::HtmlDialog.new(
         dialog_title: window_title,
-        preferences_key: 'dn1sup_time_project2_dialog',
+        preferences_key: 'dn1sup_time_project_dialog',
         width: 480, height: 720,
         min_width: 380, min_height: 520,
         resizable: true,
@@ -116,7 +116,7 @@ module Dn1supTimeProject2
       payload = safe { Tracker.ui_payload } || {}
       dlg.execute_script("window.updateUI(#{JSON.generate(payload)});")
     rescue StandardError => e
-      puts "[TimeProject2] Не удалось передать данные в диалог: #{e.message}"
+      puts "[TimeProject] Не удалось передать данные в диалог: #{e.message}"
     end
   end
 end

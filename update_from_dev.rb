@@ -1,25 +1,25 @@
 # frozen_string_literal: true
 
 # -------------------------------------------------------------------------------
-# Standalone CLI Script: Обновление DN1Sup Time Project 2 из dev-папки в SketchUp Plugins
+# Standalone CLI Script: Обновление DN1Sup Time Project из dev-папки в SketchUp Plugins
 # Запуск:
 #   ruby update_from_dev.rb
 # -------------------------------------------------------------------------------
 
-require_relative "dn1sup_time_project2/dn1sup_time_project2/dev_updater"
+require_relative "dn1sup_time_project/dn1sup_time_project/dev_updater"
 require "net/http"
 require "json"
 
 puts "=========================================================="
-puts "  DN1Sup Time Project 2 — Обновление из dev-папки"
+puts "  DN1Sup Time Project — Обновление из dev-папки"
 puts "=========================================================="
 
 dev_dir = ARGV[0] || File.expand_path(__dir__)
 plugins_dir = ARGV[1]
 
 puts "[1/3] Поиск каталогов..."
-src = Dn1supTimeProject2::DevUpdater.resolve_dev_dir(dev_dir)
-dst = Dn1supTimeProject2::DevUpdater.resolve_plugins_dir(plugins_dir)
+src = Dn1supTimeProject::DevUpdater.resolve_dev_dir(dev_dir)
+dst = Dn1supTimeProject::DevUpdater.resolve_plugins_dir(plugins_dir)
 
 puts "  • Dev папка:     #{src || '(не найдена)'}"
 puts "  • Plugins папка: #{dst || '(не найдена)'}"
@@ -35,7 +35,7 @@ unless dst && Dir.exist?(dst)
 end
 
 puts "\n[2/3] Копирование файлов расширения..."
-res = Dn1supTimeProject2::DevUpdater.update!(src, dst)
+res = Dn1supTimeProject::DevUpdater.update!(src, dst)
 
 if res[:success]
   if res[:same_dir]
@@ -57,10 +57,10 @@ bridge_port = 9877
 begin
   uri = URI("http://127.0.0.1:#{bridge_port}/eval")
   ruby_code = <<~RUBY
-    if defined?(Dn1supTimeProject2::DevUpdater)
-      Dn1supTimeProject2::DevUpdater.reload!
+    if defined?(Dn1supTimeProject::DevUpdater)
+      Dn1supTimeProject::DevUpdater.reload!
     else
-      load File.join(Sketchup.find_support_file("Plugins"), "dn1sup_time_project2.rb")
+      load File.join(Sketchup.find_support_file("Plugins"), "dn1sup_time_project.rb")
     end
   RUBY
 
@@ -81,7 +81,7 @@ begin
 rescue Errno::ECONNREFUSED, Net::OpenTimeout, StandardError
   puts "  ℹ️  SketchUp dev-мост не запущен на порту #{bridge_port}."
   puts "     Файлы в каталоге Plugins обновлены. При следующем открытии SketchUp"
-  puts "     или через меню 'Extensions -> DN1Sup -> Time Project 2 -> Обновить из dev-папки' изменения вступят в силу."
+  puts "     или через меню 'Extensions -> DN1Sup -> Time Project -> Обновить из dev-папки' изменения вступят в силу."
 end
 
 puts "\nГотово!"

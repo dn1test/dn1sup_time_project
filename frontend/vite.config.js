@@ -14,7 +14,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: path.resolve(__dirname, '../dn1sup_time_project2/dn1sup_time_project2/ui'),
+    outDir: path.resolve(__dirname, '../dn1sup_time_project/dn1sup_time_project/ui'),
     emptyOutDir: false,
     target: 'esnext',
     minify: true,

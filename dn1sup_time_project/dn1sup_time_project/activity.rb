@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/activity.rb — определение активности пользователя (WinAPI
+# dn1sup_time_project/activity.rb — определение активности пользователя (WinAPI
 # через fiddle, по образцу mouse_tracker.rb из dn1sup_menu_screen):
 #   • окно SketchUp в фокусе — GetForegroundWindow + GetWindowThreadProcessId;
 #   • секунд с последнего ввода (мышь/клавиатура) — GetLastInputInfo.
@@ -8,7 +8,7 @@
 # чтобы учёт не прерывался.
 # =============================================================================
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module Activity
     extend self
 

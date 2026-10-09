@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/test/stats_store_test.rb — тесты логики учёта времени.
+# dn1sup_time_project/test/stats_store_test.rb — тесты логики учёта времени.
 # Запуск: внутри SketchUp через ext_test (MCP sketchup-dev) или меню
 # «Тесты»; локально — ruby test/stats_store_test.rb.
 # =============================================================================
@@ -9,7 +9,7 @@ require_relative 'test_helper'
 require 'tmpdir'
 require 'fileutils'
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module Test
     # Stub модели для тестов хранилища в обычном Ruby (без SketchUp)
     class FakeModel
@@ -41,12 +41,12 @@ module Dn1supTimeProject2
     end
 
     test 'версия расширения задана (semver)' do
-    assert(Dn1supTimeProject2::VERSION.to_s.match?(/\A\d+\.\d+\.\d+\z/),
-           "версия не semver: #{Dn1supTimeProject2::VERSION}")
+    assert(Dn1supTimeProject::VERSION.to_s.match?(/\A\d+\.\d+\.\d+\z/),
+           "версия не semver: #{Dn1supTimeProject::VERSION}")
   end
 
   test 'unload! определён (нужен для ext_reload)' do
-    assert(Dn1supTimeProject2.respond_to?(:unload!), 'нет unload!')
+    assert(Dn1supTimeProject.respond_to?(:unload!), 'нет unload!')
   end
 
   # -- Tracker.segments ---------------------------------------------------------
@@ -147,7 +147,7 @@ module Dn1supTimeProject2
   end
 
   test 'первое чтение импортирует секцию из старого stats.yaml' do
-    Dir.mktmpdir('tp2test') do |dir|
+    Dir.mktmpdir('tptest') do |dir|
       skp = File.join(dir, 'Проект.skp')
       File.write(File.join(dir, 'stats.yaml'), <<~YAML)
         projects:
@@ -171,7 +171,7 @@ module Dn1supTimeProject2
   end
 
   test 'битый старый stats.yaml не мешает чтению' do
-    Dir.mktmpdir('tp2test') do |dir|
+    Dir.mktmpdir('tptest') do |dir|
       File.write(File.join(dir, 'stats.yaml'), '{ broken: [')
       loaded = StatsStore.load(FakeModel.new(path: File.join(dir, 'a.skp')))
       assert_equal({}, loaded['projects'])
@@ -179,7 +179,7 @@ module Dn1supTimeProject2
   end
 
   test 'чужие проекты из stats.yaml не попадают в модель' do
-    Dir.mktmpdir('tp2test') do |dir|
+    Dir.mktmpdir('tptest') do |dir|
       File.write(File.join(dir, 'stats.yaml'), <<~YAML)
         projects:
           "другой.skp":
@@ -289,7 +289,7 @@ module Dn1supTimeProject2
   test 'DevUpdater определяет путь к папке разработки' do
     dev_dir = DevUpdater.resolve_dev_dir
     assert(dev_dir, 'не найден dev_dir')
-    assert(File.exist?(File.join(dev_dir, 'dn1sup_time_project2.rb')), 'в dev_dir нет dn1sup_time_project2.rb')
+    assert(File.exist?(File.join(dev_dir, 'dn1sup_time_project.rb')), 'в dev_dir нет dn1sup_time_project.rb')
   end
 
   test 'DevUpdater определяет целевой каталог Plugins' do
@@ -300,8 +300,8 @@ module Dn1supTimeProject2
 end
 
 if __FILE__ == $PROGRAM_NAME
-  r = Dn1supTimeProject2::Test.run!
-  puts "[TimeProject2] тесты: #{r['passed']}/#{r['total']} пройдено, падений: #{r['failures'].size}, пропусков: #{r['skipped'].size} (#{r['duration_ms']} мс)"
+  r = Dn1supTimeProject::Test.run!
+  puts "[TimeProject] тесты: #{r['passed']}/#{r['total']} пройдено, падений: #{r['failures'].size}, пропусков: #{r['skipped'].size} (#{r['duration_ms']} мс)"
   r['failures'].each { |f| puts "FAIL #{f['name']}: #{f['error']}" }
   r['skipped'].each { |s| puts "SKIP #{s['name']}: #{s['reason']}" }
   exit(1) unless r['failures'].empty?

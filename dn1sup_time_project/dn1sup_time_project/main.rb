@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/main.rb — основная логика расширения «DN1Sup Time Project 2».
+# dn1sup_time_project/main.rb — основная логика расширения «DN1Sup Time Project».
 #
 # Код рассчитан на горячую перезагрузку (ext_reload MCP-сервера sketchup-dev):
 #   • таймеры/наблюдатели/диалоги регистрируются через track_* и снимаются
 #     в unload! — старая версия не оставляет следов;
 #   • меню и тулбар создаются один раз на сессию SketchUp: UI::Menu в
 #     современных версиях не имеет API удаления, поэтому пункты ссылаются на
-#     Dn1supTimeProject2.* через константу и после перезагрузки вызывают
+#     Dn1supTimeProject.* через константу и после перезагрузки вызывают
 #     уже новый код.
 # =============================================================================
 
@@ -33,7 +33,7 @@ end
 # StandardError — ловим явно (SU2026+ пробрасывает).
 if defined?(Sketchup) && Sketchup.respond_to?(:require)
   begin
-    Sketchup.require 'dn1sup_time_project2/dn1sup_updater'
+    Sketchup.require 'dn1sup_time_project/dn1sup_updater'
   rescue LoadError, StandardError
     nil
   end
@@ -48,18 +48,18 @@ module Dn1sup
   end
 end
 
-module Dn1supTimeProject2
-  VERSION   = '0.5.1'.freeze
+module Dn1supTimeProject
+  VERSION   = '0.5.2'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
-  MENU_NAME    = 'Time Project 2'.freeze # подменю расширения внутри COMMON_MENU
+  MENU_NAME    = 'Time Project'.freeze # подменю расширения внутри COMMON_MENU
 
-  TOOLBAR_NAME  = 'DN1Sup Time Project 2'.freeze
-  CMD_TOOLTIP   = 'DN1Sup Time Project 2 — статистика времени'.freeze
+  TOOLBAR_NAME  = 'DN1Sup Time Project'.freeze
+  CMD_TOOLTIP   = 'DN1Sup Time Project — статистика времени'.freeze
 
-  ID       = 'dn1sup_time_project2'.freeze
-  REPO     = 'dn1test/dn1sup_time_project2'.freeze
+  ID       = 'dn1sup_time_project'.freeze
+  REPO     = 'dn1test/dn1sup_time_project'.freeze
   ASSET    = "#{ID}.rbz".freeze
   PAGE_URL = "https://github.com/#{REPO}/releases".freeze
   MANIFEST = { id: ID, repo: REPO, version: VERSION, asset: ASSET }.freeze
@@ -123,6 +123,7 @@ module Dn1supTimeProject2
       return unless defined?(UI) && UI.respond_to?(:menu)
 
       @setup_done = true
+      Config.migrate_legacy!
       Tracker.start
 
       setup_ui
@@ -133,20 +134,20 @@ module Dn1supTimeProject2
     # отсутствует), и пересоздание при горячей перезагрузке накопило бы
     # дубли. Ссылка на общее меню DN1Sup живёт в глобальной переменной
     # (глобалы переживают remove_const и чистку $LOADED_FEATURES), а все
-    # пункты вызывают Dn1supTimeProject2.* через константу — после
+    # пункты вызывают Dn1supTimeProject.* через константу — после
     # перезагрузки они dispatch-атся уже в новый код, как и кнопка тулбара.
     # Меню «Extensions > DN1Sup» создаётся первым загрузившимся расширением
     # через Dn1sup.common_menu без глобальных переменных. Своё подменю создаётся один раз.
     def setup_ui
-      return if @menu_created || (defined?(Dn1sup) && Dn1sup.instance_variable_get(:@tp2_menu))
+      return if @menu_created || (defined?(Dn1sup) && Dn1sup.instance_variable_get(:@tp_menu))
 
       common = Dn1sup.common_menu
       menu = common.add_submenu(MENU_NAME)
       @menu_created = true
-      Dn1sup.instance_variable_set(:@tp2_menu, menu) if defined?(Dn1sup)
+      Dn1sup.instance_variable_set(:@tp_menu, menu) if defined?(Dn1sup)
 
       cmd_stats = UI::Command.new('Статистика времени...') do
-        Dn1supTimeProject2.safe { Dn1supTimeProject2.show_dialog }
+        Dn1supTimeProject.safe { Dn1supTimeProject.show_dialog }
       end
       cmd_stats.menu_text = 'Статистика времени...'
       cmd_stats.tooltip = 'Статистика времени работы над проектом: дни, часы, дни недели'
@@ -154,32 +155,32 @@ module Dn1supTimeProject2
       menu.add_item(cmd_stats)
 
       cmd_pause = UI::Command.new('Пауза отслеживания') do
-        Dn1supTimeProject2.safe { Dn1supTimeProject2::Tracker.toggle_pause }
+        Dn1supTimeProject.safe { Dn1supTimeProject::Tracker.toggle_pause }
       end
       cmd_pause.menu_text = 'Пауза отслеживания'
       cmd_pause.tooltip = 'Приостановить или возобновить учёт времени'
       cmd_pause.set_validation_proc do
-        Dn1supTimeProject2::Config.paused? ? MF_CHECKED : MF_UNCHECKED
+        Dn1supTimeProject::Config.paused? ? MF_CHECKED : MF_UNCHECKED
       end
       menu.add_item(cmd_pause)
 
-      menu.add_item('Показать модель в Проводнике') { Dn1supTimeProject2.safe { Dn1supTimeProject2.open_model_file } }
+      menu.add_item('Показать модель в Проводнике') { Dn1supTimeProject.safe { Dn1supTimeProject.open_model_file } }
       menu.add_separator
       menu.add_item('Проверить обновления сейчас') do
-        Dn1supTimeProject2.safe do
+        Dn1supTimeProject.safe do
           if defined?(Dn1sup::Updater)
-            Dn1sup::Updater.check!(Dn1supTimeProject2::MANIFEST.merge(force: true, async: true))
+            Dn1sup::Updater.check!(Dn1supTimeProject::MANIFEST.merge(force: true, async: true))
           else
-            UI.openURL(Dn1supTimeProject2::PAGE_URL)
+            UI.openURL(Dn1supTimeProject::PAGE_URL)
           end
         end
       end
-      menu.add_item('Страница релизов на GitHub') { UI.openURL(Dn1supTimeProject2::PAGE_URL) }
+      menu.add_item('Страница релизов на GitHub') { UI.openURL(Dn1supTimeProject::PAGE_URL) }
       menu.add_separator
-      menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject2.safe { Dn1supTimeProject2.update_from_dev } }
-      menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject2.safe { Dn1supTimeProject2.hot_reload } }
+      menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject.safe { Dn1supTimeProject.update_from_dev } }
+      menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject.safe { Dn1supTimeProject.hot_reload } }
       menu.add_separator
-      menu.add_item('О расширении') { Dn1supTimeProject2.about }
+      menu.add_item('О расширении') { Dn1supTimeProject.about }
 
       schedule_update_check
       setup_toolbar
@@ -189,12 +190,12 @@ module Dn1supTimeProject2
     # чтобы не мешать загрузке SketchUp). Таймер отслеживается и снимается
     # в unload!.
     def schedule_update_check
-      return if $dn1sup_tp2_update_check_scheduled
+      return if $dn1sup_tp_update_check_scheduled
       return unless defined?(Dn1sup::Updater) && defined?(UI) && UI.respond_to?(:start_timer)
 
-      $dn1sup_tp2_update_check_scheduled = true
+      $dn1sup_tp_update_check_scheduled = true
       track_timer(UI.start_timer(15, false) do
-        Dn1sup::Updater.check!(Dn1supTimeProject2::MANIFEST.merge(async: true))
+        Dn1sup::Updater.check!(Dn1supTimeProject::MANIFEST.merge(async: true))
       end)
     rescue StandardError
       nil
@@ -210,7 +211,7 @@ module Dn1supTimeProject2
       return if toolbar.any? { |c| c.tooltip == CMD_TOOLTIP }
 
       cmd = UI::Command.new('Статистика времени') do
-        Dn1supTimeProject2.show_dialog if defined?(Dn1supTimeProject2)
+        Dn1supTimeProject.show_dialog if defined?(Dn1supTimeProject)
       end
       cmd.menu_text = 'Статистика времени...'
       cmd.tooltip = CMD_TOOLTIP
@@ -220,7 +221,7 @@ module Dn1supTimeProject2
       toolbar.add_item(cmd)
       toolbar.restore
     rescue StandardError => e
-      puts "[TimeProject2] Не удалось создать панель инструментов: #{e.message}"
+      puts "[TimeProject] Не удалось создать панель инструментов: #{e.message}"
     end
 
     # Показать файл модели в Проводнике (файл выделен)
@@ -264,4 +265,4 @@ module Dn1supTimeProject2
   end
 end
 
-Dn1supTimeProject2.setup!
+Dn1supTimeProject.setup!

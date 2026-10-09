@@ -1,6 +1,6 @@
 {
-  "name": "dn1sup-time-project2-ui",
-  "version": "0.4.1",
+  "name": "dn1sup-time-project-ui",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "scripts": {

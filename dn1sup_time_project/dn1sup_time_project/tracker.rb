@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/tracker.rb — счётчик активного времени.
+# dn1sup_time_project/tracker.rb — счётчик активного времени.
 #
 # Тик каждые TICK_INTERVAL секунд (UI.start_timer):
 #   1. Определяем текущую модель. Сменилась — хвост интервала дописываем
@@ -25,7 +25,7 @@
 # несохранённый хвост.
 # =============================================================================
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module Tracker
     extend self
 
@@ -44,13 +44,13 @@ module Dn1supTimeProject2
       reset_state
       @app_observer = Observers::App.new
       Sketchup.add_observer(@app_observer)
-      Dn1supTimeProject2.track_observer(Sketchup, @app_observer)
+      Dn1supTimeProject.track_observer(Sketchup, @app_observer)
 
       @timer_id = UI.start_timer(TICK_INTERVAL, true) { tick }
-      Dn1supTimeProject2.track_timer(@timer_id)
+      Dn1supTimeProject.track_timer(@timer_id)
 
       tick # сразу фиксируем текущую модель и точку отсчёта
-      puts "[TimeProject2] Учёт времени запущен (тик #{TICK_INTERVAL.to_i} с, порог бездействия #{Config.idle_minutes} мин)"
+      puts "[TimeProject] Учёт времени запущен (тик #{TICK_INTERVAL.to_i} с, порог бездействия #{Config.idle_minutes} мин)"
     end
 
     def stop
@@ -72,7 +72,7 @@ module Dn1supTimeProject2
     # Пауза вручную (меню/диалог). Возвращает новое состояние.
     def toggle_pause
       Config.paused = !Config.paused?
-      puts "[TimeProject2] #{Config.paused? ? 'Пауза учёта' : 'Учёт продолжается'}"
+      puts "[TimeProject] #{Config.paused? ? 'Пауза учёта' : 'Учёт продолжается'}"
       Config.paused?
     end
 
@@ -90,10 +90,10 @@ module Dn1supTimeProject2
         credit(@last_tick, Time.now) if @last_tick && (Time.now - @last_tick) <= MAX_GAP && active_now?
         if @current_folder.nil?
           moved = StatsStore.merge_project!(@store, @store, UNSAVED, name)
-          puts "[TimeProject2] Модель сохранена как #{name}: перенесено #{moved.round(1)} с" if moved.positive?
+          puts "[TimeProject] Модель сохранена как #{name}: перенесено #{moved.round(1)} с" if moved.positive?
         else
           StatsStore.merge_project!(@store, @store, @current_name, name)
-          puts "[TimeProject2] Модель сохранена как #{name}: статистика перенесена под новое имя"
+          puts "[TimeProject] Модель сохранена как #{name}: статистика перенесена под новое имя"
         end
         @current_folder = folder
         @current_name = name
@@ -105,7 +105,7 @@ module Dn1supTimeProject2
       attach_save_observer(model)
       persist_now
     rescue StandardError => e
-      puts "[TimeProject2] Ошибка при сохранении: #{e.class}: #{e.message}"
+      puts "[TimeProject] Ошибка при сохранении: #{e.class}: #{e.message}"
     end
 
     # -- основной тик ------------------------------------------------------------
@@ -137,7 +137,7 @@ module Dn1supTimeProject2
         @status = :idle
       end
     rescue StandardError => e
-      puts "[TimeProject2] Ошибка тика: #{e.class}: #{e.message}"
+      puts "[TimeProject] Ошибка тика: #{e.class}: #{e.message}"
     end
 
     # Разбивка интервала по границам часов: [[начало, конец], ...]
@@ -175,7 +175,7 @@ module Dn1supTimeProject2
       available = data['projects'].keys
       selected = @selected_project && available.include?(@selected_project) ? @selected_project : (@current_name || UNSAVED)
       {
-        'version' => Dn1supTimeProject2::VERSION,
+        'version' => Dn1supTimeProject::VERSION,
         'status' => status.to_s,
         'paused' => Config.paused?,
         'idle_minutes' => Config.idle_minutes,
@@ -240,7 +240,7 @@ module Dn1supTimeProject2
       @current_key = model_key(model)
       @store, @store_dirty = cache_get(@current_key, model)
       attach_save_observer(model)
-      puts "[TimeProject2] Отслеживание: #{name}#{folder ? " → #{folder}" : ''}"
+      puts "[TimeProject] Отслеживание: #{name}#{folder ? " → #{folder}" : ''}"
     end
 
     # -- запись статистики в модель ------------------------------------------------
@@ -264,7 +264,7 @@ module Dn1supTimeProject2
 
       persist_now
     rescue StandardError => e
-      puts "[TimeProject2] Не удалось дописать статистику в прежнюю модель: #{e.message}"
+      puts "[TimeProject] Не удалось дописать статистику в прежнюю модель: #{e.message}"
     end
 
     # -- кэш данных открытых моделей -------------------------------------------------
@@ -301,10 +301,10 @@ module Dn1supTimeProject2
 
       @save_observer ||= Observers::SaveModel.new
       model.add_observer(@save_observer)
-      Dn1supTimeProject2.track_observer(model, @save_observer)
+      Dn1supTimeProject.track_observer(model, @save_observer)
       @attached_models[model.object_id] = true
     rescue StandardError => e
-      puts "[TimeProject2] Не удалось подключить наблюдатель сохранения: #{e.message}"
+      puts "[TimeProject] Не удалось подключить наблюдатель сохранения: #{e.message}"
     end
   end
 end

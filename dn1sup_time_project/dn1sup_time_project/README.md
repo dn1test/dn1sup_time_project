@@ -1,4 +1,4 @@
-# DN1Sup Time Project 2
+# DN1Sup Time Project
 
 Расширение SketchUp: учёт **активного** времени работы над проектом (.skp) со
 статистикой **по дням, часам и дням недели**. Продолжение `dn1sup_su_time_project`.
@@ -12,7 +12,7 @@
 - Свёрнутое окно и AFK не считаются; разрыв больше 2 мин (сон/зависание) не
   начисляется.
 - Учёт продолжается между сессиями: статистика хранится **внутри файла модели**
-  (.skp, атрибут-словарь `dn1sup_time_project2`) и уезжает вместе с файлом.
+  (.skp, атрибут-словарь `dn1sup_time_project`) и уезжает вместе с файлом.
 - Несохранённая модель: время копится в памяти и переносится в статистику
   при первом «Сохранить как».
 - Пауза: меню или кнопка ⏸ в окне статистики.
@@ -47,8 +47,8 @@
 
 ## Окно статистики
 
-Plugins → **DN1Sup** → **Time Project 2** → «Статистика времени...» или кнопка-секундомер
-на панели инструментов **DN1Sup Time Project 2**:
+Plugins → **DN1Sup** → **Time Project** → «Статистика времени...» или кнопка-секундомер
+на панели инструментов **DN1Sup Time Project**:
 
 - сводка: файл, сегодня, сессия, всего, статус (активен / бездействие / пауза);
 - вкладка «По дням» — таблица (дата, день недели, время);
@@ -62,9 +62,9 @@ Plugins → **DN1Sup** → **Time Project 2** → «Статистика вре�
 ## Структура
 
 ```
-dn1sup_time_project2.rb            регистратор (SketchupExtension + Extension Manager)
-dn1sup_time_project2/
-  main.rb                неймспейс Dn1supTimeProject2: setup!/unload!, меню
+dn1sup_time_project.rb            регистратор (SketchupExtension + Extension Manager)
+dn1sup_time_project/
+  main.rb                неймспейс Dn1supTimeProject: setup!/unload!, меню
   tracker.rb             тики, активность, сессии, запись в файл модели
   activity.rb            WinAPI через fiddle: фокус окна, последний ввод
   stats_store.rb         хранение в атрибутах модели: бакеты, агрегаты, миграция
@@ -100,7 +100,7 @@ Windows (WinAPI-детект активности), SketchUp 2024–2026 (Ruby 3
 ## Версионирование
 
 Версия `X.Y.Z`, базовая — **0.4.1**. Версия объявлена в 4 местах и меняется
-вместе: `main.rb` (`VERSION`), регистратор `dn1sup_time_project2.rb`
+вместе: `main.rb` (`VERSION`), регистратор `dn1sup_time_project.rb`
 (`ext.version`), `.sketchup_dev.json`, `test/stats_store_test.rb`; плюс
 `package.json` / `frontend/package.json` и fallback в `Header.vue`.
 

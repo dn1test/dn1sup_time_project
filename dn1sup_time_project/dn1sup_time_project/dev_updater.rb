@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/dev_updater.rb — сервис обновления расширения из каталога
+# dn1sup_time_project/dev_updater.rb — сервис обновления расширения из каталога
 # разработки (dev-папки) в системную директорию Plugins SketchUp с поддержкой
 # горячей перезагрузки (Hot Reload).
 # =============================================================================
 
 require 'fileutils'
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module DevUpdater
     extend self
 
-    DEFAULT_DEV_DIR = 'U:/dn1code/su_plugs_app/dn1sup_time_project2/dn1sup_time_project2'
+    DEFAULT_DEV_DIR = 'U:/dn1code/su_plugs_app/dn1sup_time_project/dn1sup_time_project'
 
     EXCLUDE_PATTERNS = [
       /\A\.git/,
@@ -31,11 +31,11 @@ module Dn1supTimeProject2
       plug_root = defined?(PLUG_ROOT) ? PLUG_ROOT : File.dirname(__FILE__)
       candidates = [
         custom_path,
-        ENV['DN1SUP_TIME_PROJECT2_DEV_DIR'],
+        ENV['DN1SUP_TIME_PROJECT_DEV_DIR'],
         ENV['DN1SUP_DEV_DIR'],
         DEFAULT_DEV_DIR,
-        'U:/dn1code/su_plugs_app/dn1sup_time_project2/dn1sup_time_project2',
-        'U:/dn1code/su_plugs_app/dn1sup_time_project2',
+        'U:/dn1code/su_plugs_app/dn1sup_time_project/dn1sup_time_project',
+        'U:/dn1code/su_plugs_app/dn1sup_time_project',
         File.expand_path('..', plug_root),
         File.expand_path('../..', plug_root)
       ].compact.map { |p| p.to_s.tr('\\', '/').sub(%r{/+\z}, '') }
@@ -43,16 +43,16 @@ module Dn1supTimeProject2
       candidates.each do |candidate|
         next if candidate.empty?
 
-        # Прямое совпадение: папка содержит dn1sup_time_project2.rb и dn1sup_time_project2/
-        if File.exist?(File.join(candidate, 'dn1sup_time_project2.rb')) &&
-           File.directory?(File.join(candidate, 'dn1sup_time_project2'))
+        # Прямое совпадение: папка содержит dn1sup_time_project.rb и dn1sup_time_project/
+        if File.exist?(File.join(candidate, 'dn1sup_time_project.rb')) &&
+           File.directory?(File.join(candidate, 'dn1sup_time_project'))
           return candidate
         end
 
-        # Корень репозитория: подпапка dn1sup_time_project2/ содержит loader и код
-        sub = File.join(candidate, 'dn1sup_time_project2')
-        if File.exist?(File.join(sub, 'dn1sup_time_project2.rb')) &&
-           File.directory?(File.join(sub, 'dn1sup_time_project2'))
+        # Корень репозитория: подпапка dn1sup_time_project/ содержит loader и код
+        sub = File.join(candidate, 'dn1sup_time_project')
+        if File.exist?(File.join(sub, 'dn1sup_time_project.rb')) &&
+           File.directory?(File.join(sub, 'dn1sup_time_project'))
           return sub
         end
       end
@@ -111,7 +111,7 @@ module Dn1supTimeProject2
       end
 
       src_clean = File.expand_path(src_dir).tr('\\', '/').downcase
-      dst_ext = File.expand_path(File.join(dst_plugins, 'dn1sup_time_project2')).tr('\\', '/').downcase
+      dst_ext = File.expand_path(File.join(dst_plugins, 'dn1sup_time_project')).tr('\\', '/').downcase
       if src_clean == dst_ext || src_clean == File.expand_path(dst_plugins).tr('\\', '/').downcase
         return {
           success: true,
@@ -127,17 +127,17 @@ module Dn1supTimeProject2
       files_copied = 0
       warnings = []
 
-      # 1. Загрузчик dn1sup_time_project2.rb в корень Plugins
-      root_loader = File.join(src_dir, 'dn1sup_time_project2.rb')
+      # 1. Загрузчик dn1sup_time_project.rb в корень Plugins
+      root_loader = File.join(src_dir, 'dn1sup_time_project.rb')
       if File.exist?(root_loader)
-        target_loader = File.join(dst_plugins, 'dn1sup_time_project2.rb')
-        copied = safe_copy(root_loader, target_loader, warnings, 'dn1sup_time_project2.rb')
+        target_loader = File.join(dst_plugins, 'dn1sup_time_project.rb')
+        copied = safe_copy(root_loader, target_loader, warnings, 'dn1sup_time_project.rb')
         files_copied += 1 if copied == :copied
       end
 
-      # 2. Пакетная директория dn1sup_time_project2/
-      src_pkg = File.join(src_dir, 'dn1sup_time_project2')
-      dst_pkg = File.join(dst_plugins, 'dn1sup_time_project2')
+      # 2. Пакетная директория dn1sup_time_project/
+      src_pkg = File.join(src_dir, 'dn1sup_time_project')
+      dst_pkg = File.join(dst_plugins, 'dn1sup_time_project')
       FileUtils.mkdir_p(dst_pkg)
 
       Dir.glob(File.join(src_pkg, '**', '*'), File::FNM_DOTMATCH).each do |entry|
@@ -176,11 +176,11 @@ module Dn1supTimeProject2
       target_plugins = resolve_plugins_dir(plugins_dir)
 
       # 1. Выгружаем текущие ресурсы
-      if defined?(Dn1supTimeProject2) && Dn1supTimeProject2.respond_to?(:unload!)
+      if defined?(Dn1supTimeProject) && Dn1supTimeProject.respond_to?(:unload!)
         begin
-          Dn1supTimeProject2.unload!
+          Dn1supTimeProject.unload!
         rescue StandardError => e
-          puts "[TimeProject2] Предупреждение при unload!: #{e.message}"
+          puts "[TimeProject] Предупреждение при unload!: #{e.message}"
         end
       end
 
@@ -188,25 +188,25 @@ module Dn1supTimeProject2
       purged = 0
       if defined?($LOADED_FEATURES)
         $LOADED_FEATURES.reject! do |path|
-          match = path.include?('dn1sup_time_project2')
+          match = path.include?('dn1sup_time_project')
           purged += 1 if match
           match
         end
       end
 
       # 3. Удаляем константу модуля для полной переинициализации
-      if Object.const_defined?(:Dn1supTimeProject2)
-        Object.send(:remove_const, :Dn1supTimeProject2)
+      if Object.const_defined?(:Dn1supTimeProject)
+        Object.send(:remove_const, :Dn1supTimeProject)
       end
 
       # 4. Загружаем свежие файлы
-      loader = File.join(target_plugins, 'dn1sup_time_project2.rb')
-      main_rb = File.join(target_plugins, 'dn1sup_time_project2', 'main.rb')
+      loader = File.join(target_plugins, 'dn1sup_time_project.rb')
+      main_rb = File.join(target_plugins, 'dn1sup_time_project', 'main.rb')
 
       load loader if File.exist?(loader)
       load main_rb if File.exist?(main_rb)
 
-      ver = defined?(Dn1supTimeProject2::VERSION) ? Dn1supTimeProject2::VERSION : 'unknown'
+      ver = defined?(Dn1supTimeProject::VERSION) ? Dn1supTimeProject::VERSION : 'unknown'
 
       {
         success: true,
@@ -234,12 +234,12 @@ module Dn1supTimeProject2
       reload_res = reload!(plugins_dir)
       res = res.merge(reload_res)
 
-      if reopen_dialog && defined?(Dn1supTimeProject2) && Dn1supTimeProject2.respond_to?(:show_dialog)
-        Dn1supTimeProject2.show_dialog
+      if reopen_dialog && defined?(Dn1supTimeProject) && Dn1supTimeProject.respond_to?(:show_dialog)
+        Dn1supTimeProject.show_dialog
       end
 
       if notify && defined?(UI)
-        msg = "✅ DN1Sup Time Project 2 (v#{res[:version]}) успешно обновлен из dev-папки!\n\n" \
+        msg = "✅ DN1Sup Time Project (v#{res[:version]}) успешно обновлен из dev-папки!\n\n" \
               "Откуда: #{res[:dev_dir]}\n" \
               "Куда: #{res[:plugins_dir]}\n" \
               "Скопировано файлов: #{res[:files_copied]}"

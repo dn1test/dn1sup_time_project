@@ -3,11 +3,15 @@ import ru from './ru'
 import en from './en'
 
 const LOCALES = { ru, en }
-const STORAGE_KEY = 'dn1sup_time_project2.locale'
+const STORAGE_KEY = 'dn1sup_time_project.locale'
+const LEGACY_STORAGE_KEY = 'dn1sup_time_project2.locale' // до переименования расширения
 
 function storedLocale() {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
+    let saved = window.localStorage.getItem(STORAGE_KEY)
+    if (!saved || !LOCALES[saved]) {
+      saved = window.localStorage.getItem(LEGACY_STORAGE_KEY)
+    }
     return saved && LOCALES[saved] ? saved : null
   } catch {
     return null

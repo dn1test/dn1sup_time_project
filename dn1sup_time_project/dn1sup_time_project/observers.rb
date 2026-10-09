@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2/observers.rb — наблюдатели SketchUp.
+# dn1sup_time_project/observers.rb — наблюдатели SketchUp.
 # Учёт построен на тиках таймера (Tracker#tick сам замечает смену файла),
 # обсерверы нужны только для мгновенной реакции: открытие/создание модели,
 # сохранение, выход из SketchUp.
 # =============================================================================
 
-module Dn1supTimeProject2
+module Dn1supTimeProject
   module Observers
     # Классы определяются только внутри SketchUp — чтобы модуль грузился
     # и в обычном Ruby (локальный прогон тестов).
@@ -18,12 +18,12 @@ module Dn1supTimeProject2
         end
 
         def onNewModel(_model)
-          puts '[TimeProject2] Создана новая модель'
+          puts '[TimeProject] Создана новая модель'
           Tracker.tick
         end
 
         def onOpenModel(_model)
-          puts '[TimeProject2] Модель открыта'
+          puts '[TimeProject] Модель открыта'
           Tracker.tick
         end
 

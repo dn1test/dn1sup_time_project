@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 # =============================================================================
-# dn1sup_time_project2.rb — регистратор расширения «DN1Sup Time Project 2» (единственный файл в корне
+# dn1sup_time_project.rb — регистратор расширения «DN1Sup Time Project» (единственный файл в корне
 # Plugins). SketchUp автозагружает top-level .rb при старте; весь код лежит
-# рядом в подпапке dn1sup_time_project2/.
+# рядом в подпапке dn1sup_time_project/.
 #
 # Регистратор идемпотентен: повторный load (горячая перезагрузка через
 # ext_reload) не дублирует запись в Extension Manager — main.rb при этом
@@ -17,14 +17,14 @@ require 'extensions.rb'
 
 # ExtensionManager не включает Enumerable — только each/[]/size.
 _registered = false
-Sketchup.extensions.each { |e| _registered = true if e.name == "DN1Sup Time Project 2" }
+Sketchup.extensions.each { |e| _registered = true if e.name == "DN1Sup Time Project" }
 
 unless _registered
-  ext = SketchupExtension.new("DN1Sup Time Project 2", File.join('dn1sup_time_project2', 'main'))
+  ext = SketchupExtension.new("DN1Sup Time Project", File.join('dn1sup_time_project', 'main'))
   ext.description = "Учёт активного времени работы над проектом: статистика по дням, часам и дням недели хранится внутри файла модели (.skp)"
-  ext.version     = '0.5.1'
+  ext.version     = '0.5.2'
   ext.creator     = "DN1Sup"
   ext.copyright   = '2026 DN1Sup <dn1codegen@gmail.com> (MIT)'
-  ext.id          = 'dn1sup_time_project2' if ext.respond_to?(:id=)
+  ext.id          = 'dn1sup_time_project' if ext.respond_to?(:id=)
   Sketchup.register_extension(ext, true) # true = загружать при старте SketchUp
 end
