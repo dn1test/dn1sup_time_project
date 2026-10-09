@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between p-2.5 bg-slate-100/70 dark:bg-slate-800/50 rounded-xl text-xs">
       <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
         <Flame :size="13" class="text-orange-500" />
-        <span class="font-medium">Основная нагрузка:</span>
+        <span class="font-medium">{{ t('wd.load') }}</span>
       </div>
       <div v-if="peakDayIndex !== null && peakValue > 0" class="font-bold text-brand-600 dark:text-brand-400">
         {{ FULL_DAYS[peakDayIndex] }} ({{ formatDuration(peakValue, true) }})
@@ -17,7 +17,7 @@
     <!-- Chart Container -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200/90 dark:border-slate-800/90 shadow-2xs">
       <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-2 flex items-center justify-between">
-        <span>ПО ДНЯМ НЕДЕЛИ (СУММАРНО)</span>
+        <span>{{ t('wd.title') }}</span>
         <span v-if="hoveredDay !== null" class="text-brand-600 dark:text-brand-400 font-bold">
           {{ FULL_DAYS[hoveredDay] }}: {{ formatDuration(weekdays[hoveredDay]) }}
         </span>
@@ -68,7 +68,7 @@
     <div class="grid grid-cols-2 gap-2 text-xs">
       <div class="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xs">
         <div class="flex items-center justify-between text-slate-400 text-[11px] mb-1">
-          <span>Будни (Пн–Пт)</span>
+          <span>{{ t('wd.weekdays') }}</span>
           <span class="font-bold text-slate-700 dark:text-slate-200">{{ weekdayPct }}%</span>
         </div>
         <div class="font-extrabold text-slate-800 dark:text-slate-100 text-sm">
@@ -78,7 +78,7 @@
 
       <div class="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800/90 shadow-2xs">
         <div class="flex items-center justify-between text-slate-400 text-[11px] mb-1">
-          <span>Выходные (Сб–Вс)</span>
+          <span>{{ t('wd.weekend') }}</span>
           <span class="font-bold text-slate-700 dark:text-slate-200">{{ weekendPct }}%</span>
         </div>
         <div class="font-extrabold text-slate-800 dark:text-slate-100 text-sm">
@@ -93,6 +93,7 @@
 import { ref, computed } from 'vue'
 import { Flame } from 'lucide-vue-next'
 import { formatDuration } from '../utils/formatters'
+import { t, dict } from '../i18n'
 
 const props = defineProps({
   weekdays: {
@@ -101,8 +102,9 @@ const props = defineProps({
   }
 })
 
-const SHORT_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
-const FULL_DAYS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+// Пн первый; имена дней локализуются на фронте
+const SHORT_DAYS = computed(() => dict.value['wd.short'])
+const FULL_DAYS = computed(() => dict.value['wd.full'])
 
 const hoveredDay = ref(null)
 

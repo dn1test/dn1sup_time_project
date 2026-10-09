@@ -1,6 +1,6 @@
 {
   "name": "dn1sup-time-project2",
-  "version": "2.4.0",
+  "version": "0.4.1",
   "private": true,
   "scripts": {
     "build": "npm --prefix frontend run build",

@@ -72,13 +72,10 @@
     </main>
 
     <!-- Bottom Status Strip -->
-    <footer class="px-3.5 py-1.5 bg-white/70 dark:bg-slate-900/70 border-t border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
+    <footer class="px-3.5 py-1.5 bg-white/70 dark:bg-slate-900/70 border-t border-slate-200/70 dark:border-slate-800/70 flex items-center text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
       <div class="flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span>
-        <span>Синхронизация раз в {{ state.tick_interval }} с</span>
-      </div>
-      <div>
-        <span>stats.yaml</span>
+        <span>{{ t('footer.sync', { n: state.tick_interval }) }}</span>
       </div>
     </footer>
   </div>
@@ -87,6 +84,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useSketchupBridge } from './composables/useSketchupBridge'
+import { t } from './i18n'
 import Header from './components/Header.vue'
 import ModelCard from './components/ModelCard.vue'
 import MetricsCards from './components/MetricsCards.vue'

@@ -33,11 +33,31 @@
         <span class="tracking-wide text-[11px]">{{ statusConfig.label }}</span>
       </div>
 
+      <!-- Language Switcher -->
+      <div
+        class="flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 shrink-0"
+        role="group"
+        aria-label="Language"
+      >
+        <button
+          v-for="lang in ['ru', 'en']"
+          :key="lang"
+          type="button"
+          @click="setLocale(lang)"
+          class="px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide transition-colors cursor-pointer"
+          :class="locale === lang
+            ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-2xs'
+            : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'"
+        >
+          {{ lang.toUpperCase() }}
+        </button>
+      </div>
+
       <!-- Theme Switcher -->
       <button
         @click="toggleTheme"
         class="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        :title="isDark ? 'Переключить на светлую тему' : 'Переключить на тёмную тему'"
+        :title="isDark ? t('theme.toLight') : t('theme.toDark')"
       >
         <Sun v-if="isDark" :size="15" />
         <Moon v-else :size="15" />
@@ -50,11 +70,12 @@
 import { computed } from 'vue'
 import { Clock, Sun, Moon } from 'lucide-vue-next'
 import { useTheme } from '../composables/useTheme'
+import { t, locale, setLocale } from '../i18n'
 
 const props = defineProps({
   version: {
     type: String,
-    default: '2.4.0'
+    default: '0.4.1'
   },
   status: {
     type: String,
@@ -69,14 +90,14 @@ const props = defineProps({
 const { isDark, toggleTheme } = useTheme()
 
 const versionTag = computed(() => {
-  if (!props.version) return 'v2.4.0'
+  if (!props.version) return 'v0.4.1'
   return props.version.startsWith('v') ? props.version : `v${props.version}`
 })
 
 const statusConfig = computed(() => {
   if (props.paused || props.status === 'paused') {
     return {
-      label: 'Пауза',
+      label: t('status.paused'),
       badgeClass: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-amber-800/60',
       dotClass: 'bg-amber-500',
       pulse: false
@@ -86,21 +107,21 @@ const statusConfig = computed(() => {
   switch (props.status) {
     case 'active':
       return {
-        label: 'В работе',
+        label: t('status.active'),
         badgeClass: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/80 dark:border-emerald-800/60',
         dotClass: 'bg-emerald-500',
         pulse: true
       }
     case 'idle':
       return {
-        label: 'Бездействие',
+        label: t('status.idle'),
         badgeClass: 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700',
         dotClass: 'bg-slate-400',
         pulse: false
       }
     default:
       return {
-        label: 'Остановлен',
+        label: t('status.off'),
         badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
         dotClass: 'bg-slate-400',
         pulse: false

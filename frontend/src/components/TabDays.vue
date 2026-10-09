@@ -3,25 +3,25 @@
     <!-- Quick Insights Bar -->
     <div v-if="days && days.length > 0" class="grid grid-cols-3 gap-1.5 p-2 bg-slate-100/70 dark:bg-slate-800/50 rounded-xl text-center text-xs">
       <div>
-        <div class="text-[10px] text-slate-400 font-medium">Активных дней</div>
+        <div class="text-[10px] text-slate-400 font-medium">{{ t('days.activeDays') }}</div>
         <div class="font-bold text-slate-700 dark:text-slate-200 mt-0.5">{{ days.length }}</div>
       </div>
       <div>
-        <div class="text-[10px] text-slate-400 font-medium">В среднем / день</div>
+        <div class="text-[10px] text-slate-400 font-medium">{{ t('days.avgPerDay') }}</div>
         <div class="font-bold text-slate-700 dark:text-slate-200 mt-0.5">{{ formatDuration(averagePerDay, true) }}</div>
       </div>
       <div>
-        <div class="text-[10px] text-slate-400 font-medium">Рекорд за день</div>
+        <div class="text-[10px] text-slate-400 font-medium">{{ t('days.record') }}</div>
         <div class="font-bold text-brand-600 dark:text-brand-400 mt-0.5">{{ formatDuration(maxSeconds, true) }}</div>
       </div>
     </div>
 
     <!-- Filter chips -->
     <div v-if="days && days.length > 7" class="flex items-center justify-between gap-1 text-[11px] px-1">
-      <span class="text-slate-400 font-medium">Показать:</span>
+      <span class="text-slate-400 font-medium">{{ t('days.show') }}</span>
       <div class="flex items-center gap-1">
         <button
-          v-for="f in [ { id: 'all', label: 'Все' }, { id: '30', label: '30 дн' }, { id: '7', label: '7 дн' } ]"
+          v-for="f in [ { id: 'all', label: t('days.filterAll') }, { id: '30', label: t('days.filter30') }, { id: '7', label: t('days.filter7') } ]"
           :key="f.id"
           type="button"
           @click="filter = f.id"
@@ -39,8 +39,8 @@
     <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800/90 overflow-hidden shadow-2xs">
       <div v-if="!filteredDays.length" class="py-8 px-4 text-center text-slate-400 dark:text-slate-500 text-xs">
         <CalendarX :size="24" class="mx-auto mb-2 opacity-50" />
-        <p>Нет записей по этому проекту.</p>
-        <p class="text-[11px] mt-1 text-slate-400">Время начнёт учитываться при работе над моделью.</p>
+        <p>{{ t('days.empty') }}</p>
+        <p class="text-[11px] mt-1 text-slate-400">{{ t('days.emptyHint') }}</p>
       </div>
 
       <div v-else class="max-h-[310px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -61,12 +61,12 @@
                 class="text-xs font-semibold"
                 :class="row.date === today ? 'text-brand-600 dark:text-brand-400 font-bold' : 'text-slate-700 dark:text-slate-200'"
               >
-                {{ formatDateRu(row.date, today) }}
-              </span>
-            </div>
-            <div class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-              {{ row.weekday }}
-            </div>
+              {{ formatDate(row.date, today) }}
+            </span>
+          </div>
+          <div class="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+            {{ weekdayName(row.date) }}
+          </div>
           </div>
 
           <!-- Progress bar -->
@@ -78,7 +78,7 @@
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
                   : 'bg-gradient-to-r from-brand-500 to-sky-400'"
                 :style="{ width: Math.min(100, Math.max(3, Math.round((row.seconds / maxSeconds) * 100))) + '%' }"
-                :title="`${Math.round((row.seconds / maxSeconds) * 100)}% от рекорда`"
+                :title="`${Math.round((row.seconds / maxSeconds) * 100)}${t('days.recordPct')}`"
               ></div>
             </div>
           </div>
@@ -101,7 +101,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { CalendarX } from 'lucide-vue-next'
-import { formatDuration, formatDateRu } from '../utils/formatters'
+import { formatDuration, formatDate, weekdayIndexFrom } from '../utils/formatters'
+import { t, dict } from '../i18n'
 
 const props = defineProps({
   days: { type: Array, default: () => [] },
@@ -109,6 +110,12 @@ const props = defineProps({
 })
 
 const filter = ref('all')
+
+// Имя дня недели локализуется на фронте — из даты (Ruby шлёт его по-русски)
+function weekdayName(dateStr) {
+  const idx = weekdayIndexFrom(dateStr)
+  return idx >= 0 ? dict.value['wd.full'][idx] : ''
+}
 
 const filteredDays = computed(() => {
   if (!props.days) return []

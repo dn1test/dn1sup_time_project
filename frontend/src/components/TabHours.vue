@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between p-2.5 bg-slate-100/70 dark:bg-slate-800/50 rounded-xl text-xs">
       <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
         <Sparkles :size="13" class="text-amber-500" />
-        <span class="font-medium">Пиковая продуктивность:</span>
+        <span class="font-medium">{{ t('hours.peak') }}</span>
       </div>
       <div v-if="peakHour !== null && peakValue > 0" class="font-bold text-brand-600 dark:text-brand-400">
         {{ peakHour }}:00 – {{ peakHour + 1 }}:00 ({{ formatDuration(peakValue, true) }})
@@ -17,7 +17,7 @@
     <!-- Chart Container -->
     <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200/90 dark:border-slate-800/90 shadow-2xs">
       <div class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-2 flex items-center justify-between">
-        <span>РАСПРЕДЕЛЕНИЕ ПО ЧАСАМ (0–23 ч)</span>
+        <span>{{ t('hours.distTitle') }}</span>
         <span v-if="hoveredHour !== null" class="text-brand-600 dark:text-brand-400 font-bold">
           {{ hoveredHour }}:00: {{ formatDuration(hours[hoveredHour]) }}
         </span>
@@ -52,7 +52,7 @@
       <!-- Axis Labels (Every 3 hours to prevent crowding) -->
       <div class="flex justify-between text-[9px] font-mono text-slate-400 dark:text-slate-500 mt-1.5 px-0.5">
         <span v-for="h in [0, 3, 6, 9, 12, 15, 18, 21, 23]" :key="h">
-          {{ h }}ч
+          {{ h }}{{ t('hours.h') }}
         </span>
       </div>
     </div>
@@ -78,6 +78,7 @@
 import { ref, computed } from 'vue'
 import { Sparkles } from 'lucide-vue-next'
 import { formatDuration } from '../utils/formatters'
+import { t } from '../i18n'
 
 const props = defineProps({
   hours: {
@@ -135,11 +136,12 @@ function getBarClass(h, val) {
 }
 
 const daySegments = computed(() => {
+  const h = t('hours.h')
   const segs = [
-    { name: 'Ночь', hours: '0–6ч', total: 0 },
-    { name: 'Утро', hours: '6–12ч', total: 0 },
-    { name: 'День', hours: '12–18ч', total: 0 },
-    { name: 'Вечер', hours: '18–24ч', total: 0 },
+    { name: t('hours.night'), hours: `0–6${h}`, total: 0 },
+    { name: t('hours.morning'), hours: `6–12${h}`, total: 0 },
+    { name: t('hours.day'), hours: `12–18${h}`, total: 0 },
+    { name: t('hours.evening'), hours: `18–24${h}`, total: 0 },
   ]
   props.hours.forEach((val, h) => {
     if (h < 6) segs[0].total += val

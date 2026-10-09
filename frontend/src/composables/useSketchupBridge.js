@@ -58,7 +58,7 @@ if (typeof window !== 'undefined') {
 
 export function useSketchupBridge() {
   const state = reactive({
-    version: '2.4.0',
+    version: '0.4.1',
     status: 'off',
     paused: false,
     idle_minutes: 5,

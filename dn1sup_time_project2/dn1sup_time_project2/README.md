@@ -97,6 +97,20 @@ dn1sup_time_project2/
 Windows (WinAPI-детект активности), SketchUp 2024–2026 (Ruby 3.2), проверено
 на SU 2026.2. На не-Windows учёт работает без проверки фокуса/ввода.
 
+## Версионирование
+
+Версия `X.Y.Z`, базовая — **0.4.1**. Версия объявлена в 4 местах и меняется
+вместе: `main.rb` (`VERSION`), регистратор `dn1sup_time_project2.rb`
+(`ext.version`), `.sketchup_dev.json`, `test/stats_store_test.rb`; плюс
+`package.json` / `frontend/package.json` и fallback в `Header.vue`.
+
+- **Y** (вторая цифра) — изменения в проекте: новые функции, переработки;
+- **Z** (последняя) — мелкие правки: фиксы, косметика;
+- **X** (первая цифра) — только по явному запросу.
+
+Релиз: коммит с бампом версии → тег `vX.Y.Z` → GitHub Actions собирает
+`.rbz` через `tools/pack.rb` и публикует Release.
+
 ## Автор и лицензия
 
 - **Автор**: DN1Sup <dn1codegen@gmail.com>

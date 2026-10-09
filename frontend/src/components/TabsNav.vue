@@ -17,7 +17,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Calendar, BarChart3, CalendarRange } from 'lucide-vue-next'
+import { t } from '../i18n'
 
 defineProps({
   modelValue: { type: String, default: 'days' }
@@ -25,9 +27,9 @@ defineProps({
 
 defineEmits(['update:modelValue'])
 
-const tabs = [
-  { id: 'days', label: 'По дням', icon: Calendar },
-  { id: 'hours', label: 'По часам', icon: BarChart3 },
-  { id: 'weekdays', label: 'По дням недели', icon: CalendarRange }
-]
+const tabs = computed(() => [
+  { id: 'days', label: t('tabs.days'), icon: Calendar },
+  { id: 'hours', label: t('tabs.hours'), icon: BarChart3 },
+  { id: 'weekdays', label: t('tabs.weekdays'), icon: CalendarRange }
+])
 </script>
