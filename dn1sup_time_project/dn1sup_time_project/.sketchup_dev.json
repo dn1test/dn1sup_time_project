@@ -2,7 +2,7 @@
   "id": "dn1sup_time_project",
   "display_name": "DN1Sup Time Project",
   "namespace": "Dn1supTimeProject",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "created_at": "2026-09-28",
   "scaffolded_by": "sketchup-dev-mcp"
 }

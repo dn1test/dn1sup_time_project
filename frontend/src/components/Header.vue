@@ -9,7 +9,10 @@
         <h1 class="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100 truncate">
           Time Project
         </h1>
-        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60 shrink-0">
+        <span
+          v-if="versionTag"
+          class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60 shrink-0"
+        >
           {{ versionTag }}
         </span>
       </div>
@@ -75,7 +78,7 @@ import { t, locale, setLocale } from '../i18n'
 const props = defineProps({
   version: {
     type: String,
-    default: '0.4.1'
+    default: null
   },
   status: {
     type: String,
@@ -89,8 +92,9 @@ const props = defineProps({
 
 const { isDark, toggleTheme } = useTheme()
 
+// Реальную версию присылает Ruby в payload; до первого ответа бейдж не показываем
 const versionTag = computed(() => {
-  if (!props.version) return 'v0.4.1'
+  if (!props.version) return null
   return props.version.startsWith('v') ? props.version : `v${props.version}`
 })
 

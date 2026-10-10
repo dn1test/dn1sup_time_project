@@ -179,6 +179,9 @@ module Dn1supTimeProject
         'status' => status.to_s,
         'paused' => Config.paused?,
         'idle_minutes' => Config.idle_minutes,
+        # dev-кнопка UI имеет смысл только в dev-копии: в .rbz dev_updater.rb
+        # не пакуется, и колбэк без флага падал бы NameError
+        'dev' => defined?(DevUpdater) ? true : false,
         'current' => @current_name,
         'folder' => @current_folder.to_s,
         'session_seconds' => @session_seconds.round(1),

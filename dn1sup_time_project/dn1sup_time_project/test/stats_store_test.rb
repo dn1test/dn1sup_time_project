@@ -41,13 +41,13 @@ module Dn1supTimeProject
     end
 
     test 'версия расширения задана (semver)' do
-    assert(Dn1supTimeProject::VERSION.to_s.match?(/\A\d+\.\d+\.\d+\z/),
-           "версия не semver: #{Dn1supTimeProject::VERSION}")
-  end
+      assert(Dn1supTimeProject::VERSION.to_s.match?(/\A\d+\.\d+\.\d+\z/),
+             "версия не semver: #{Dn1supTimeProject::VERSION}")
+    end
 
-  test 'unload! определён (нужен для ext_reload)' do
-    assert(Dn1supTimeProject.respond_to?(:unload!), 'нет unload!')
-  end
+    test 'unload! определён (нужен для ext_reload)' do
+      assert(Dn1supTimeProject.respond_to?(:unload!), 'нет unload!')
+    end
 
   # -- Tracker.segments ---------------------------------------------------------
 
@@ -206,7 +206,6 @@ module Dn1supTimeProject
     assert_equal 60.0, agg['hours'][10]
     assert_equal 3600.0, agg['weekdays'][0], 'понедельник должен быть первым'
     assert_equal 60.0, agg['weekdays'][6], 'воскресенье должно быть последним'
-    assert_equal 'Понедельник', agg['days'].first['weekday']
     assert_equal '2026-09-28', agg['days'].first['date'], 'новые дни сверху'
   end
 
@@ -257,13 +256,6 @@ module Dn1supTimeProject
     assert_equal({ '14' => 90.0 }, proj['days']['2026-09-28']['hours'])
   end
 
-  # -- день недели ---------------------------------------------------------------------
-
-  test 'имена дней недели: 2026-09-28 — понедельник' do
-    assert_equal 1, Date.parse('2026-09-28').wday
-    assert_equal 'Понедельник', StatsStore::WD_RU[Date.parse('2026-09-28').wday]
-  end
-
   # -- живые проверки (только в SketchUp) ------------------------------------------------
 
   test 'Tracker запущен и знает текущую модель' do
@@ -305,5 +297,5 @@ if __FILE__ == $PROGRAM_NAME
   r['failures'].each { |f| puts "FAIL #{f['name']}: #{f['error']}" }
   r['skipped'].each { |s| puts "SKIP #{s['name']}: #{s['reason']}" }
   exit(1) unless r['failures'].empty?
-  end
+end
 end

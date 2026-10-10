@@ -4,6 +4,7 @@ const mockData = {
   status: 'active',
   paused: false,
   idle_minutes: 5,
+  dev: false,
   current: 'Малиновка ~ Детская (2 этаж).skp',
   folder: 'U:\\dn1desn\\mihail\\home\\Вадим ~ Малиновка\\Детская (2 этаж) ~ Шкафы, Стол, Потолок',
   session_seconds: 869.7,
@@ -17,10 +18,10 @@ const mockData = {
     first_seen: '2026-09-28',
     last_seen: '2026-10-01',
     days: [
-      { date: '2026-10-01', weekday: 'Четверг', seconds: 4948.5 },
-      { date: '2026-09-30', weekday: 'Среда', seconds: 13781.4 },
-      { date: '2026-09-29', weekday: 'Вторник', seconds: 3810.1 },
-      { date: '2026-09-28', weekday: 'Понедельник', seconds: 2490.0 },
+      { date: '2026-10-01', seconds: 4948.5 },
+      { date: '2026-09-30', seconds: 13781.4 },
+      { date: '2026-09-29', seconds: 3810.1 },
+      { date: '2026-09-28', seconds: 2490.0 },
     ],
     hours: [
       773.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 480.0,
@@ -58,10 +59,11 @@ if (typeof window !== 'undefined') {
 
 export function useSketchupBridge() {
   const state = reactive({
-    version: '0.4.1',
+    version: null,
     status: 'off',
     paused: false,
     idle_minutes: 5,
+    dev: false,
     current: null,
     folder: '',
     session_seconds: 0,
@@ -121,6 +123,7 @@ export function useSketchupBridge() {
     state.status = payload.status || 'off'
     state.paused = Boolean(payload.paused)
     state.idle_minutes = payload.idle_minutes ?? 5
+    state.dev = Boolean(payload.dev)
     state.current = payload.current || null
     state.folder = payload.folder || ''
     state.session_seconds = payload.session_seconds ?? 0

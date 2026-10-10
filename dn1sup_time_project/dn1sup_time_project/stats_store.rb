@@ -39,7 +39,6 @@ module Dn1supTimeProject
     KEY = 'stats'
     LEGACY_FILE_NAME = 'stats.yaml'
     OPERATION_NAME = 'Статистика времени'
-    WD_RU = %w[Воскресенье Понедельник Вторник Среда Четверг Пятница Суббота].freeze
 
     def fresh_data
       { 'projects' => {} }
@@ -122,14 +121,14 @@ module Dn1supTimeProject
       moved
     end
 
-    # Агрегаты проекта для диалога; nil если проекта нет в данных
+    # Агрегаты проекта для диалога; nil если проекта нет в данных.
+    # День недели не отправляем — UI вычисляет его из даты (локализация на фронте).
     def aggregates(data, project_name, today: Date.today.strftime('%Y-%m-%d'))
       proj = data['projects'][project_name]
       return nil unless proj
 
       days = proj['days'].keys.sort.map do |date|
-        wday = Date.parse(date).wday
-        { 'date' => date, 'weekday' => WD_RU[wday], 'seconds' => proj['days'][date]['seconds'].round(1) }
+        { 'date' => date, 'seconds' => proj['days'][date]['seconds'].round(1) }
       end
 
       hours = Array.new(24, 0.0)

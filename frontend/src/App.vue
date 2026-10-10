@@ -37,6 +37,7 @@
         :idle-minutes="state.idle_minutes"
         :is-refreshing="isRefreshing"
         :is-updating-dev="isUpdatingDev"
+        :is-dev="state.dev"
         @toggle-pause="togglePause"
         @refresh="refresh"
         @open-folder="openFolder"

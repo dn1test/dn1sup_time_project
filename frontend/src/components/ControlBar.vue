@@ -37,8 +37,9 @@
         <span>{{ t('controls.folder') }}</span>
       </button>
 
-      <!-- Dev Update Button -->
+      <!-- Dev Update Button (dev installs only; .rbz ships no DevUpdater) -->
       <button
+        v-if="isDev"
         @click="$emit('update-from-dev')"
         :disabled="isUpdatingDev"
         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/40 dark:hover:bg-brand-900/40 text-brand-700 dark:text-brand-300 border border-brand-200/80 dark:border-brand-800/60 transition-colors ml-auto cursor-pointer"
@@ -101,7 +102,8 @@ const props = defineProps({
   paused: { type: Boolean, default: false },
   idleMinutes: { type: Number, default: 5 },
   isRefreshing: { type: Boolean, default: false },
-  isUpdatingDev: { type: Boolean, default: false }
+  isUpdatingDev: { type: Boolean, default: false },
+  isDev: { type: Boolean, default: false }
 })
 
 const emit = defineEmits([

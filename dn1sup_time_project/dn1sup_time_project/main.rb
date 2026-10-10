@@ -16,7 +16,6 @@ begin
 rescue LoadError
   # загрузка в обычном Ruby — только для локального запуска тестов
 end
-require 'uri'
 
 %w[config activity stats_store observers tracker dialog win_shell].each do |name|
   require File.join(File.dirname(__FILE__), "#{name}.rb")
@@ -49,7 +48,7 @@ module Dn1sup
 end
 
 module Dn1supTimeProject
-  VERSION   = '0.5.2'.freeze
+  VERSION   = '0.5.3'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
@@ -176,9 +175,13 @@ module Dn1supTimeProject
         end
       end
       menu.add_item('Страница релизов на GitHub') { UI.openURL(Dn1supTimeProject::PAGE_URL) }
-      menu.add_separator
-      menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject.safe { Dn1supTimeProject.update_from_dev } }
-      menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject.safe { Dn1supTimeProject.hot_reload } }
+      # dev-сервисные пункты — только в dev-копии: в .rbz dev_updater.rb
+      # не пакуется, пункты были бы мёртвыми заглушками
+      if defined?(DevUpdater)
+        menu.add_separator
+        menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject.safe { Dn1supTimeProject.update_from_dev } }
+        menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject.safe { Dn1supTimeProject.hot_reload } }
+      end
       menu.add_separator
       menu.add_item('О расширении') { Dn1supTimeProject.about }
 

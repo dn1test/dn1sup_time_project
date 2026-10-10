@@ -136,17 +136,17 @@ function getBarClass(h, val) {
 }
 
 const daySegments = computed(() => {
-  const h = t('hours.h')
+  const unit = t('hours.h')
   const segs = [
-    { name: t('hours.night'), hours: `0–6${h}`, total: 0 },
-    { name: t('hours.morning'), hours: `6–12${h}`, total: 0 },
-    { name: t('hours.day'), hours: `12–18${h}`, total: 0 },
-    { name: t('hours.evening'), hours: `18–24${h}`, total: 0 },
+    { name: t('hours.night'), hours: `0–6${unit}`, total: 0 },
+    { name: t('hours.morning'), hours: `6–12${unit}`, total: 0 },
+    { name: t('hours.day'), hours: `12–18${unit}`, total: 0 },
+    { name: t('hours.evening'), hours: `18–24${unit}`, total: 0 },
   ]
-  props.hours.forEach((val, h) => {
-    if (h < 6) segs[0].total += val
-    else if (h < 12) segs[1].total += val
-    else if (h < 18) segs[2].total += val
+  props.hours.forEach((val, hour) => {
+    if (hour < 6) segs[0].total += val
+    else if (hour < 12) segs[1].total += val
+    else if (hour < 18) segs[2].total += val
     else segs[3].total += val
   })
   return segs

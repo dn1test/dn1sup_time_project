@@ -8,11 +8,6 @@ export default defineConfig({
     vue(),
     viteSingleFile()
   ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
   build: {
     outDir: path.resolve(__dirname, '../dn1sup_time_project/dn1sup_time_project/ui'),
     emptyOutDir: false,

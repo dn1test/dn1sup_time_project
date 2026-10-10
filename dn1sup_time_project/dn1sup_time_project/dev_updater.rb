@@ -11,7 +11,7 @@ module Dn1supTimeProject
   module DevUpdater
     extend self
 
-    DEFAULT_DEV_DIR = 'U:/dn1code/su_plugs_app/dn1sup_time_project/dn1sup_time_project'
+    DEFAULT_DEV_DIR = 'U:/dn1code/sketchup_ext/dn1sup_time_project/dn1sup_time_project'
 
     EXCLUDE_PATTERNS = [
       /\A\.git/,
@@ -34,8 +34,6 @@ module Dn1supTimeProject
         ENV['DN1SUP_TIME_PROJECT_DEV_DIR'],
         ENV['DN1SUP_DEV_DIR'],
         DEFAULT_DEV_DIR,
-        'U:/dn1code/su_plugs_app/dn1sup_time_project/dn1sup_time_project',
-        'U:/dn1code/su_plugs_app/dn1sup_time_project',
         File.expand_path('..', plug_root),
         File.expand_path('../..', plug_root)
       ].compact.map { |p| p.to_s.tr('\\', '/').sub(%r{/+\z}, '') }
