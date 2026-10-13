@@ -19,9 +19,11 @@
         :first-seen="state.stats?.first_seen"
         :last-seen="state.stats?.last_seen"
         :is-copied="isCopied"
+        :paused="state.paused"
         @select-project="selectProject"
         @open-folder="openFolder"
         @copy-folder="copyFolder"
+        @toggle-pause="togglePause"
       />
 
       <!-- KPI Metrics Row -->
@@ -32,17 +34,9 @@
         :is-active="state.status === 'active' && !state.paused"
       />
 
-      <!-- Action & Control Bar -->
+      <!-- AFK Threshold Bar -->
       <ControlBar
-        :paused="state.paused"
         :idle-minutes="state.idle_minutes"
-        :is-refreshing="isRefreshing"
-        :is-updating-dev="isUpdatingDev"
-        :is-dev="state.dev"
-        @toggle-pause="togglePause"
-        @refresh="refresh"
-        @open-folder="openFolder"
-        @update-from-dev="updateFromDev"
         @set-idle-minutes="setIdleMinutes"
       />
 
@@ -100,13 +94,9 @@ const activeTab = ref('days')
 
 const {
   state,
-  isUpdatingDev,
-  isRefreshing,
   isCopied,
   togglePause,
-  refresh,
   openFolder,
-  updateFromDev,
   setIdleMinutes,
   selectProject,
   copyFolder,

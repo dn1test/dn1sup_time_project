@@ -1,18 +1,32 @@
 <template>
   <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-200/90 dark:border-slate-800/90 shadow-2xs transition-all">
-    <!-- Header of Card: label & date range -->
+    <!-- Header of Card: label & date range + pause -->
     <div class="flex items-center justify-between gap-2 mb-1.5">
-      <div class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-        <Box :size="13" class="text-brand-500" />
-        <span>{{ t('model.title') }}</span>
+      <div class="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider min-w-0">
+        <Box :size="13" class="text-brand-500 shrink-0" />
+        <span class="truncate">{{ t('model.title') }}</span>
       </div>
-      <div
-        v-if="dateRange"
-        class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-medium"
-        :title="t('model.period')"
-      >
-        <Calendar :size="11" class="text-slate-400" />
-        <span>{{ dateRange }}</span>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <div
+          v-if="dateRange"
+          class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap"
+          :title="t('model.period')"
+        >
+          <Calendar :size="11" class="text-slate-400" />
+          <span>{{ dateRange }}</span>
+        </div>
+        <button
+          @click="$emit('toggle-pause')"
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer whitespace-nowrap"
+          :class="paused
+            ? 'bg-amber-500 hover:bg-amber-600 active:scale-98 text-white shadow-amber-500/20'
+            : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700/80'"
+          :title="paused ? t('controls.resumeTip') : t('controls.pauseTip')"
+        >
+          <Play v-if="paused" :size="14" class="fill-current" />
+          <Pause v-else :size="14" />
+          <span>{{ paused ? t('controls.resume') : t('controls.pause') }}</span>
+        </button>
       </div>
     </div>
 
@@ -82,7 +96,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Box, Calendar, Folder, Copy, Check, ExternalLink } from 'lucide-vue-next'
+import { Box, Calendar, Folder, Copy, Check, ExternalLink, Play, Pause } from 'lucide-vue-next'
 import { formatDateRange } from '../utils/formatters'
 import { t } from '../i18n'
 
@@ -93,10 +107,11 @@ const props = defineProps({
   projects: { type: Array, default: () => [] },
   firstSeen: { type: String, default: null },
   lastSeen: { type: String, default: null },
-  isCopied: { type: Boolean, default: false }
+  isCopied: { type: Boolean, default: false },
+  paused: { type: Boolean, default: false }
 })
 
-defineEmits(['select-project', 'open-folder', 'copy-folder'])
+defineEmits(['select-project', 'open-folder', 'copy-folder', 'toggle-pause'])
 
 // Метка, которой Ruby помечает модель без имени (Tracker::UNSAVED)
 const RUBY_UNSAVED = 'Без имени (не сохранён)'
