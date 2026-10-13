@@ -48,8 +48,10 @@ module Dn1sup
 end
 
 module Dn1supTimeProject
-  VERSION   = '0.5.3'.freeze
+  VERSION   = '0.5.4'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
+  # DEV-вариант живёт в Plugins/<id>_dev/ — признак по имени корневой папки
+  DEV_BUILD = File.basename(PLUG_ROOT).end_with?('_dev').freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
   MENU_NAME    = 'Time Project'.freeze # подменю расширения внутри COMMON_MENU

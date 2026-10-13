@@ -5,6 +5,7 @@
       :version="state.version"
       :status="state.status"
       :paused="state.paused"
+      :dev-build="state.devBuild"
     />
 
     <!-- Main Scrollable Content Area -->
