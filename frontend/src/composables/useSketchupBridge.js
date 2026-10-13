@@ -167,6 +167,11 @@ export function useSketchupBridge() {
     }, 3000)
   }
 
+  // Проверка обновления: сначала локальная папка разработки, потом GitHub
+  function checkUpdate() {
+    callRuby('check_update')
+  }
+
   function setIdleMinutes(val) {
     const num = parseFloat(val)
     if (!isNaN(num) && num > 0) {
@@ -253,6 +258,7 @@ export function useSketchupBridge() {
     refresh,
     openFolder,
     updateFromDev,
+    checkUpdate,
     setIdleMinutes,
     selectProject,
     copyFolder,

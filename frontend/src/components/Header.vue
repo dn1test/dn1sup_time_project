@@ -56,6 +56,16 @@
         </button>
       </div>
 
+      <!-- Проверить обновление: сначала локальная папка, потом GitHub -->
+      <button
+        type="button"
+        class="p-1.5 rounded-full text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        title="Проверить обновление: сначала локальная папка разработки, потом GitHub"
+        @click="$emit('check-update')"
+      >
+        <RotateCw :size="15" />
+      </button>
+
       <!-- Theme Switcher -->
       <button
         @click="toggleTheme"
@@ -71,7 +81,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Clock, Sun, Moon } from 'lucide-vue-next'
+import { Clock, Sun, Moon, RotateCw } from 'lucide-vue-next'
 import { useTheme } from '../composables/useTheme'
 import { t, locale, setLocale } from '../i18n'
 
@@ -89,6 +99,8 @@ const props = defineProps({
     default: false
   }
 })
+
+defineEmits(['check-update'])
 
 const { isDark, toggleTheme } = useTheme()
 

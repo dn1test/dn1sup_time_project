@@ -5,6 +5,7 @@
       :version="state.version"
       :status="state.status"
       :paused="state.paused"
+      @check-update="checkUpdate"
     />
 
     <!-- Main Scrollable Content Area -->
@@ -99,5 +100,6 @@ const {
   setIdleMinutes,
   selectProject,
   copyFolder,
+  checkUpdate,
 } = useSketchupBridge()
 </script>

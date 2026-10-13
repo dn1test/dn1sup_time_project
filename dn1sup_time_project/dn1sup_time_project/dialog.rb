@@ -95,6 +95,16 @@ module Dn1supTimeProject
           push_data(dlg)
         when 'open_folder'
           safe { open_model_file }
+        when 'check_update'
+          # Кнопка «круг со стрелками» в шапке: сначала локальная папка
+          # (DEV_DIR из MANIFEST), потом GitHub — ставится свежайшее.
+          safe do
+            if defined?(Dn1sup::Updater)
+              Dn1sup::Updater.check_local_first!(MANIFEST.merge(force: true, async: true))
+            else
+              UI.openURL(PAGE_URL)
+            end
+          end
         when 'update_from_dev'
           safe do
             if defined?(UI) && UI.respond_to?(:start_timer)
