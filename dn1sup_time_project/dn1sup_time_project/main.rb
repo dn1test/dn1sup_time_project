@@ -178,13 +178,6 @@ module Dn1supTimeProject
         end
       end
       menu.add_item('Страница релизов на GitHub') { UI.openURL(Dn1supTimeProject::PAGE_URL) }
-      # dev-сервисные пункты — только в dev-копии: в .rbz dev_updater.rb
-      # не пакуется, пункты были бы мёртвыми заглушками
-      if defined?(DevUpdater)
-        menu.add_separator
-        menu.add_item('🔄 Обновить из рабочей копии') { Dn1supTimeProject.safe { Dn1supTimeProject.update_from_dev } }
-        menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject.safe { Dn1supTimeProject.hot_reload } }
-      end
       menu.add_separator
       menu.add_item('О расширении') { Dn1supTimeProject.about }
 
@@ -239,18 +232,6 @@ module Dn1supTimeProject
       end
       path = File.join(folder, Tracker.current_name.to_s)
       UI.messagebox("Файл не найден: #{path}") unless File.exist?(path) && WinShell.reveal(path)
-    end
-
-    def update_from_dev(dev_dir = nil)
-      return unless defined?(DevUpdater)
-      was_open = @dialog && @dialog.visible?
-      DevUpdater.update_and_reload!(dev_dir: dev_dir, reopen_dialog: was_open, notify: true)
-    end
-
-    def hot_reload
-      return unless defined?(DevUpdater)
-      DevUpdater.reload!
-      UI.messagebox("⚡ Time Project v#{VERSION} перезагружен!") if defined?(UI)
     end
 
     def about

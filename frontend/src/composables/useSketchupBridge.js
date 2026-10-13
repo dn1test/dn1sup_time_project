@@ -82,7 +82,6 @@ export function useSketchupBridge() {
     }
   })
 
-  const isUpdatingDev = ref(false)
   const isRefreshing = ref(false)
   const isCopied = ref(false)
   let pollTimer = null
@@ -107,11 +106,6 @@ export function useSketchupBridge() {
         state.idle_minutes = parseFloat(param) || 5
       } else if (name === 'select_project') {
         state.selected = param
-      } else if (name === 'update_from_dev') {
-        isUpdatingDev.value = true
-        setTimeout(() => {
-          isUpdatingDev.value = false
-        }, 1200)
       }
     }
     return false
@@ -157,14 +151,6 @@ export function useSketchupBridge() {
 
   function openFolder() {
     callRuby('open_folder')
-  }
-
-  function updateFromDev() {
-    isUpdatingDev.value = true
-    callRuby('update_from_dev')
-    setTimeout(() => {
-      isUpdatingDev.value = false
-    }, 3000)
   }
 
   // Проверка обновления: сначала локальная папка разработки, потом GitHub
@@ -251,13 +237,11 @@ export function useSketchupBridge() {
 
   return {
     state,
-    isUpdatingDev,
     isRefreshing,
     isCopied,
     togglePause,
     refresh,
     openFolder,
-    updateFromDev,
     checkUpdate,
     setIdleMinutes,
     selectProject,
