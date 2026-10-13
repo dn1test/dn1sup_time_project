@@ -64,7 +64,6 @@ export function useSketchupBridge() {
     paused: false,
     idle_minutes: 5,
     dev: false,
-    devBuild: false, // загружен dev-вариант (Plugins/<id>_dev) — бейдж DEV в шапке
     current: null,
     folder: '',
     session_seconds: 0,
@@ -125,7 +124,6 @@ export function useSketchupBridge() {
     state.paused = Boolean(payload.paused)
     state.idle_minutes = payload.idle_minutes ?? 5
     state.dev = Boolean(payload.dev)
-    state.devBuild = Boolean(payload.dev_build)
     state.current = payload.current || null
     state.folder = payload.folder || ''
     state.session_seconds = payload.session_seconds ?? 0

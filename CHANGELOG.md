@@ -3,6 +3,14 @@
 Лог изменений **DN1Sup Time Project** (`dn1sup_time_project`).
 Формат версий соответствует правилам `MAJOR.MINOR.PATCH`.
 
+## [0.6.0] — 2026-10-13
+
+- Удалён функционал dev/prod (второй id `dn1sup_time_project_dev`): удалены
+  `DEV_BUILD`, поле `dev_build` в данных трекера и бейдж DEV в шапке.
+  Разработка — рабочая копия под тем же id («Обновить из рабочей копии» /
+  reload); self-update рабочей копии отключён по пути загрузки
+  (`Dn1sup::Updater.dev_source?`); файлы `.sketchup_dev.json` удалены.
+
 ## [0.5.4] — unreleased
 
 - feat: DEV badge in dialog header when running the dev build (dev_build flag)

@@ -78,12 +78,11 @@ dn1sup_time_project/
   ui/assets/             вендоренный modus-bootstrap.min.css
   test/test_helper.rb    мини-харнесс (run! / assert / skip)
   test/stats_store_test.rb
-  .sketchup_dev.json     манифест для инструментов MCP (display name, namespace)
 ```
 
 ## Разработка с живой обратной связью (MCP sketchup-dev)
 
-1. Правка кода в этой папке (dev-копия).
+1. Правка кода в этой папке (рабочая копия, один id).
 2. `ext_install` — скопировать в Plugins живого SketchUp.
 3. `ext_reload` — горячая перезагрузка: unload! → чистка $LOADED_FEATURES → load.
 4. `ext_test` — прогон тестов внутри SketchUp.
@@ -99,9 +98,9 @@ Windows (WinAPI-детект активности), SketchUp 2024–2026 (Ruby 3
 
 ## Версионирование
 
-Версия `X.Y.Z`, базовая — **0.4.1**. Версия объявлена в 4 местах и меняется
+Версия `X.Y.Z`, базовая — **0.4.1**. Версия объявлена в 3 местах и меняется
 вместе: `main.rb` (`VERSION`), регистратор `dn1sup_time_project.rb`
-(`ext.version`), `.sketchup_dev.json`, `test/stats_store_test.rb`; плюс
+(`ext.version`), `test/stats_store_test.rb`; плюс
 `package.json` / `frontend/package.json` и fallback в `Header.vue`.
 
 - **Y** (вторая цифра) — изменения в проекте: новые функции, переработки;

@@ -182,8 +182,6 @@ module Dn1supTimeProject
         # dev-кнопка UI имеет смысл только в dev-копии: в .rbz dev_updater.rb
         # не пакуется, и колбэк без флага падал бы NameError
         'dev' => defined?(DevUpdater) ? true : false,
-        # загружен именно dev-вариант (Plugins/<id>_dev) — для бейджа DEV в шапке
-        'dev_build' => Dn1supTimeProject::DEV_BUILD,
         'current' => @current_name,
         'folder' => @current_folder.to_s,
         'session_seconds' => @session_seconds.round(1),

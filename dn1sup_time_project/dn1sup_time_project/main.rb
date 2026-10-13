@@ -48,10 +48,8 @@ module Dn1sup
 end
 
 module Dn1supTimeProject
-  VERSION   = '0.5.4'.freeze
+  VERSION   = '0.6.0'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
-  # DEV-вариант живёт в Plugins/<id>_dev/ — признак по имени корневой папки
-  DEV_BUILD = File.basename(PLUG_ROOT).end_with?('_dev').freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
   MENU_NAME    = 'Time Project'.freeze # подменю расширения внутри COMMON_MENU
@@ -181,7 +179,7 @@ module Dn1supTimeProject
       # не пакуется, пункты были бы мёртвыми заглушками
       if defined?(DevUpdater)
         menu.add_separator
-        menu.add_item('🔄 Обновить из dev-папки') { Dn1supTimeProject.safe { Dn1supTimeProject.update_from_dev } }
+        menu.add_item('🔄 Обновить из рабочей копии') { Dn1supTimeProject.safe { Dn1supTimeProject.update_from_dev } }
         menu.add_item('⚡ Перезагрузить (Hot Reload)') { Dn1supTimeProject.safe { Dn1supTimeProject.hot_reload } }
       end
       menu.add_separator
