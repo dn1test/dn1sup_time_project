@@ -11,8 +11,8 @@
 |---|---|
 | Имя `dn1sup_*` в аккаунте `dn1test` | ✅ `dn1test/dn1sup_time_project` |
 | Не archived | ✅ |
-| `registry.json` в корне `main` | ✅ (id `dn1sup_time_project`, version 0.5.3) |
-| Стабильные релизы с `.rbz` | ✅ 7 релизов, последний `v0.5.3` — ассет `dn1sup_time_project-0.5.3.rbz` |
+| `registry.json` в корне `main` | ✅ (id `dn1sup_time_project`, version 0.6.0) |
+| Стабильные релизы с `.rbz` | ✅ 8 релизов, последний `v0.6.0` — ассет `dn1sup_time_project-0.6.0.rbz` |
 | Теги `vMAJOR.MINOR.PATCH` | ✅ теги `v*` у всех релизов |
 | Регистратор `<id>.rb` + `ext.id` | ✅ `dn1sup_time_project.rb`, `ext.id = 'dn1sup_time_project'` |
 

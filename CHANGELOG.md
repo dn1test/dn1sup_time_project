@@ -10,11 +10,8 @@
   Разработка — рабочая копия под тем же id («Обновить из рабочей копии» /
   reload); self-update рабочей копии отключён по пути загрузки
   (`Dn1sup::Updater.dev_source?`); файлы `.sketchup_dev.json` удалены.
-
-## [0.5.4] — unreleased
-
-- feat: DEV badge in dialog header when running the dev build (dev_build flag)
-- feat(gui): pause/resume button moved to model card header next to period; refresh/folder/dev buttons removed from control bar, AFK threshold bar only
+- feat(gui): кнопка паузы/продолжения перенесена в шапку карточки модели
+  рядом с периодом; кнопки обновления/папки/dev убраны из панели управления.
 
 ## [0.5.3] — 2026-10-10
 
