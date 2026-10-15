@@ -3,6 +3,13 @@
 Лог изменений **DN1Sup Time Project** (`dn1sup_time_project`).
 Формат версий соответствует правилам `MAJOR.MINOR.PATCH`.
 
+## [0.7.1] — 2026-10-16
+
+- chore(updates): убран переходный чек маркера `.sketchup_dev.json` из
+  `dev_source?` (`shared/dn1sup_updater.rb`) — период миграции со старых
+  `_dev`-установок завершён; self-update рабочей копии определяется только
+  по пути загрузки (код вне папки `Plugins` SketchUp).
+
 ## [0.7.0] — 2026-10-15
 
 - feat(updates): самообновление расширения — кнопка проверки обновлений
