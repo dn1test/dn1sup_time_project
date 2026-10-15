@@ -3,6 +3,19 @@
 Лог изменений **DN1Sup Time Project** (`dn1sup_time_project`).
 Формат версий соответствует правилам `MAJOR.MINOR.PATCH`.
 
+## [0.7.0] — 2026-10-15
+
+- feat(updates): самообновление расширения — кнопка проверки обновлений
+  в шапке диалога; проверка сначала смотрит локальную папку разработки,
+  затем GitHub Releases, установка прилетевшего `.rbz` одной кнопкой
+  (расширен `shared/dn1sup_updater.rb`).
+- refactor!: убраны dev-кнопки обновления из рабочей копии и hot reload
+  из UI (`dialog.rb`, `main.rb`, `ui/index.html`, `useSketchupBridge.js`) —
+  разработка ведётся в рабочей копии под тем же id («Обновить из рабочей
+  копии» / reload), self-update рабочей копии отключён (`dev_source?`).
+- chore: единый апдейтер `Dn1sup::Updater` v3 во всех местах проверки
+  обновлений; добавлен `author` в `registry.json`.
+
 ## [0.6.0] — 2026-10-13
 
 - Удалён функционал dev/prod (второй id `dn1sup_time_project_dev`): удалены
