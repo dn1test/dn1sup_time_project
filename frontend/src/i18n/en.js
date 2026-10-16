@@ -8,6 +8,8 @@ export default {
   'status.off': 'Stopped',
   'theme.toLight': 'Switch to light theme',
   'theme.toDark': 'Switch to dark theme',
+  'lang.toEn': 'Switch to English',
+  'lang.toRu': 'Switch to Russian',
 
   // ModelCard
   'model.title': 'SketchUp Model',

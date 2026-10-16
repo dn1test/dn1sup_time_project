@@ -36,25 +36,17 @@
         <span class="tracking-wide text-[11px]">{{ statusConfig.label }}</span>
       </div>
 
-      <!-- Language Switcher -->
-      <div
-        class="flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 shrink-0"
-        role="group"
-        aria-label="Language"
+      <!-- Language Switcher: одна кнопка с глобусом и текущим языком -->
+      <button
+        type="button"
+        @click="toggleLocale"
+        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 text-[10px] font-bold tracking-wide transition-colors cursor-pointer shrink-0"
+        :title="locale === 'ru' ? t('lang.toEn') : t('lang.toRu')"
+        :aria-label="locale === 'ru' ? t('lang.toEn') : t('lang.toRu')"
       >
-        <button
-          v-for="lang in ['ru', 'en']"
-          :key="lang"
-          type="button"
-          @click="setLocale(lang)"
-          class="px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide transition-colors cursor-pointer"
-          :class="locale === lang
-            ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-2xs'
-            : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'"
-        >
-          {{ lang.toUpperCase() }}
-        </button>
-      </div>
+        <Globe :size="12" class="stroke-[2.5]" />
+        {{ locale.toUpperCase() }}
+      </button>
 
       <!-- Проверить обновление: сначала локальная папка, потом GitHub -->
       <button
@@ -81,7 +73,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Clock, Sun, Moon, RotateCw } from 'lucide-vue-next'
+import { Clock, Sun, Moon, RotateCw, Globe } from 'lucide-vue-next'
 import { useTheme } from '../composables/useTheme'
 import { t, locale, setLocale } from '../i18n'
 
@@ -103,6 +95,10 @@ const props = defineProps({
 defineEmits(['check-update'])
 
 const { isDark, toggleTheme } = useTheme()
+
+function toggleLocale() {
+  setLocale(locale.value === 'ru' ? 'en' : 'ru')
+}
 
 // Реальную версию присылает Ruby в payload; до первого ответа бейдж не показываем
 const versionTag = computed(() => {
