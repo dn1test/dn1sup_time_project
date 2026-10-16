@@ -2,9 +2,7 @@
   <header class="flex items-center justify-between px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-20 transition-colors">
     <!-- Brand / Title -->
     <div class="flex items-center gap-2.5 min-w-0">
-      <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-sky-400 flex items-center justify-center text-white shadow-sm shadow-brand-500/20 shrink-0">
-        <Clock :size="15" class="stroke-[2.5]" />
-      </div>
+      <img src="../assets/logo.svg" width="28" height="28" class="shrink-0" alt="DN1Sup Time Project">
       <div class="flex items-center gap-1.5 min-w-0">
         <h1 class="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100 truncate">
           Time Project
@@ -73,7 +71,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Clock, Sun, Moon, RotateCw, Globe } from 'lucide-vue-next'
+import { Sun, Moon, RotateCw, Globe } from 'lucide-vue-next'
 import { useTheme } from '../composables/useTheme'
 import { t, locale, setLocale } from '../i18n'
 

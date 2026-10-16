@@ -3,6 +3,12 @@
 Лог изменений **DN1Sup Time Project** (`dn1sup_time_project`).
 Формат версий соответствует правилам `MAJOR.MINOR.PATCH`.
 
+## [0.7.6] — 2026-10-16
+
+### DN1Sup Time Project (v0.7.6)
+- **Фирменная плитка DN1Sup в шапке GUI** — та же плитка, что в каталоге
+  Extension Store (цветной квадрат, знак с «воздухом»); работает в светлой
+  и тёмной теме. Источник — `dn1sup_extensions` (`tools/make_icons.rb`).
 ## [0.7.5] — 2026-10-16
 
 ### DN1Sup Time Project (v0.7.5)
