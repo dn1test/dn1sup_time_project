@@ -48,7 +48,7 @@ module Dn1sup
 end
 
 module Dn1supTimeProject
-  VERSION   = '0.7.3'.freeze
+  VERSION   = '0.7.4'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
@@ -215,8 +215,14 @@ module Dn1supTimeProject
       cmd.menu_text = 'Статистика времени...'
       cmd.tooltip = CMD_TOOLTIP
       cmd.status_bar_text = 'Открыть окно статистики времени работы'
-      cmd.small_icon = File.join(PLUG_ROOT, 'icons', 'timer_16.png')
-      cmd.large_icon = File.join(PLUG_ROOT, 'icons', 'timer_24.png')
+      svg = File.join(PLUG_ROOT, 'icons', 'timer.svg')
+      if File.exist?(svg) && defined?(Sketchup) && Sketchup.respond_to?(:version) && Sketchup.version.to_i >= 16
+        cmd.small_icon = svg
+        cmd.large_icon = svg
+      else
+        cmd.small_icon = File.join(PLUG_ROOT, 'icons', 'timer_16.png')
+        cmd.large_icon = File.join(PLUG_ROOT, 'icons', 'timer_24.png')
+      end
       toolbar.add_item(cmd)
       toolbar.restore
     rescue StandardError => e
