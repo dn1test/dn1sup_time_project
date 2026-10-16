@@ -3,6 +3,15 @@
 Лог изменений **DN1Sup Time Project** (`dn1sup_time_project`).
 Формат версий соответствует правилам `MAJOR.MINOR.PATCH`.
 
+## [0.7.5] — 2026-10-16
+
+### DN1Sup Time Project (v0.7.5)
+- **Фирменный знак тулбара DN1Sup** — единый стиль каталога Extension
+  Store: часы со стрелками (sky), прозрачный фон, вырезы — настоящая прозрачность
+  (SVG-маска; PNG 16/24 — альфа-канал). Источник знака —
+  `dn1sup_extensions` → `icons/products/` (`tools/make_icons.rb`).
+
+
 ## [0.7.4] — 2026-10-16
 
 - feat(icons): векторная иконка тулбара `timer.svg` в фирменном стиле

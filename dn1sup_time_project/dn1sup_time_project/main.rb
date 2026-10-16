@@ -48,7 +48,7 @@ module Dn1sup
 end
 
 module Dn1supTimeProject
-  VERSION   = '0.7.4'.freeze
+  VERSION   = '0.7.5'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
