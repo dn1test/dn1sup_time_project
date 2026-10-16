@@ -45,7 +45,7 @@
         :aria-label="locale === 'ru' ? t('lang.toEn') : t('lang.toRu')"
       >
         <Globe :size="12" class="stroke-[2.5]" />
-        {{ locale.toUpperCase() }}
+        {{ locale === 'ru' ? 'EN' : 'RU' }}
       </button>
 
       <!-- Проверить обновление: сначала локальная папка, потом GitHub -->
