@@ -153,7 +153,7 @@ export function useSketchupBridge() {
     callRuby('open_folder')
   }
 
-  // Проверка обновления: сначала локальная папка разработки, потом GitHub
+  // Проверка обновления: релизы на GitHub
   function checkUpdate() {
     callRuby('check_update')
   }

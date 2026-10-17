@@ -48,7 +48,7 @@ module Dn1sup
 end
 
 module Dn1supTimeProject
-  VERSION   = '0.7.6'.freeze
+  VERSION   = '0.7.7'.freeze
   PLUG_ROOT = File.dirname(__FILE__).freeze
 
   COMMON_MENU  = 'DN1Sup'.freeze # общее меню всех расширений DN1Sup
@@ -61,10 +61,8 @@ module Dn1supTimeProject
   REPO     = 'dn1test/dn1sup_time_project'.freeze
   ASSET    = "#{ID}.rbz".freeze
   PAGE_URL = "https://github.com/#{REPO}/releases".freeze
-  # Папка разработки задана в самом расширении (корень репозитория):
-  # проверка обновления сначала смотрит её, потом GitHub.
-  DEV_DIR  = File.expand_path('../..', PLUG_ROOT).freeze
-  MANIFEST = { id: ID, repo: REPO, version: VERSION, asset: ASSET, dev_dir: DEV_DIR }.freeze
+  # Обновление — только через GitHub Releases (релиз + registry.json).
+  MANIFEST = { id: ID, repo: REPO, version: VERSION, asset: ASSET }.freeze
 
   class << self
     # -- отслеживаемые ресурсы (снимаются в unload!) ---------------------------
@@ -171,7 +169,7 @@ module Dn1supTimeProject
       menu.add_item('Проверить обновления сейчас') do
         Dn1supTimeProject.safe do
           if defined?(Dn1sup::Updater)
-            Dn1sup::Updater.check_local_first!(Dn1supTimeProject::MANIFEST.merge(force: true, async: true))
+            Dn1sup::Updater.check!(Dn1supTimeProject::MANIFEST.merge(force: true, async: true))
           else
             UI.openURL(Dn1supTimeProject::PAGE_URL)
           end
@@ -185,16 +183,16 @@ module Dn1supTimeProject
       setup_toolbar
     end
 
-    # Фоновая проверка обновлений один раз за сессию (не раньше 15 секунд,
-    # чтобы не мешать загрузке SketchUp). Таймер отслеживается и снимается
-    # в unload!.
+    # Фоновая проверка обновлений на GitHub один раз за сессию (не раньше
+    # 15 секунд, чтобы не мешать загрузке SketchUp). Таймер отслеживается
+    # и снимается в unload!.
     def schedule_update_check
       return if $dn1sup_tp_update_check_scheduled
       return unless defined?(Dn1sup::Updater) && defined?(UI) && UI.respond_to?(:start_timer)
 
       $dn1sup_tp_update_check_scheduled = true
       track_timer(UI.start_timer(15, false) do
-        Dn1sup::Updater.check_local_first!(Dn1supTimeProject::MANIFEST.merge(async: true))
+        Dn1sup::Updater.check!(Dn1supTimeProject::MANIFEST.merge(async: true))
       end)
     rescue StandardError
       nil

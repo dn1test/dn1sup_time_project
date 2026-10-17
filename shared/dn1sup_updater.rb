@@ -20,9 +20,10 @@ require 'time'
 #
 # MANIFEST = { id: 'my_extension', repo: 'owner/repo', version: '1.2.3', asset: 'my_extension.rbz' }
 #
-# Актуальная версия расширения берётся из registry.json репозитория (поле version
-# конкретного расширения); общий тег релиза монорепо — fallback при недоступном
-# реестре. Сетевые запросы выполняются в фоновом потоке, UI — на главном.
+# Обновление — ТОЛЬКО через GitHub Releases. Актуальная версия расширения
+# берётся из registry.json репозитория (поле version конкретного расширения);
+# тег релиза — fallback при недоступном реестре. Сетевые запросы выполняются
+# в фоновом потоке, UI — на главном.
 module Dn1sup
   module Updater
     module_function
@@ -450,502 +451,49 @@ module Dn1sup
       File.delete(path) if path && File.file?(path) rescue nil
     end
 
-    # --- local dev source --------------------------------------------------
+    # --- совместимость: локальный источник обновлений удалён ----------------
     #
-    # Путь к локальной папке разработки задаётся в самом расширении
-    # (MANIFEST: dev_dir / dev_path). Проверка обновления сначала смотрит
-    # локальную версию, потом GitHub — ставится та, что свежее. Если папки
-    # нет, обновление идёт только из GitHub (обычный check!).
-    # Установка из локали — сборкой .rbz на лету и штатным
-    # Sketchup.install_from_archive (тот же путь, что GitHub-архив).
+    # Раньше здесь была проверка локальной папки разработки с приоритетом над
+    # GitHub (check_local_first! → apply_local_check → install_from_local_dir).
+    # Обновление теперь идёт ТОЛЬКО через GitHub Releases. Методы оставлены
+    # как заглушки: модуль Dn1sup::Updater в памяти SketchUp один на все
+    # расширения DN1Sup (методы побеждает последняя загруженная копия), а
+    # меню/таймеры соседних расширений и Store менеджера зовут их по имени.
+    # Заглушки дают таким вызывающим GitHub-поведение вместо NoMethodError.
 
-    # Каталоги/файлы, не попадающие в локально собранный .rbz.
-    LOCAL_RBZ_EXCLUDE_FILES = %w[
-      dev_updater.rb
-      README.md
-      README.MD
-      .gitignore
-      package.json
-    ].freeze unless defined?(LOCAL_RBZ_EXCLUDE_FILES)
+    # Бывшая точка входа «сначала локальная папка, потом GitHub». Локального
+    # источника больше нет — работает как check! (только GitHub).
+    def check_local_first!(cfg)
+      check!(cfg)
+    end
 
-    LOCAL_RBZ_EXCLUDE_DIRS = %w[
-      test
-      tests
-      .git
-      .zcode
-      archive
-      node_modules
-      frontend
-      dist
-      packages
-    ].freeze unless defined?(LOCAL_RBZ_EXCLUDE_DIRS)
-
-    # Поиск исходников расширения внутри папки разработки. Раскладки:
-    #   <dev>/<id>.rb + <dev>/<id>/            (менеджер, src-корень)
-    #   <dev>/src/<id>.rb + <dev>/src/<id>/    (менеджер, корень репозитория)
-    #   <dev>/<id>/<id>.rb + <dev>/<id>/<id>/  (расширения, корень репозитория)
-    # Возвращает { loader:, plugin_dir: } или nil.
-    def find_local_source(dev_dir, id)
-      base = dev_dir.to_s
-      return nil if base.empty? || id.to_s.empty?
-      return nil unless File.directory?(base)
-
-      id_s = id.to_s
-      candidates = [
-        [File.join(base, "#{id_s}.rb"), File.join(base, id_s)],
-        [File.join(base, 'src', "#{id_s}.rb"), File.join(base, 'src', id_s)],
-        [File.join(base, id_s, "#{id_s}.rb"), File.join(base, id_s, id_s)]
-      ]
-      # dev_dir уже указывает на корень исходников (как DevUpdater DEFAULT_DEV_DIR)
-      if File.file?(File.join(base, "#{id_s}.rb")) && File.directory?(File.join(base, id_s))
-        return { loader: File.join(base, "#{id_s}.rb"), plugin_dir: File.join(base, id_s) }
-      end
-      candidates.each do |loader, plug|
-        return { loader: loader, plugin_dir: plug } if File.file?(loader) && File.directory?(plug)
-      end
+    # Локальная папка разработки не используется: источника нет.
+    def resolve_dev_dir(_cfg)
       nil
     end
 
-    # Папка разработки для cfg: явный dev_dir/dev_path из самого расширения
-    # первичен; дальше — ENV-переопределения и соседние папки.
-    def resolve_dev_dir(cfg)
-      id_s = (cfg.is_a?(Hash) ? (cfg[:id] || cfg['id']) : cfg).to_s
-      hint = cfg.is_a?(Hash) ? (cfg[:dev_dir] || cfg['dev_dir'] || cfg[:dev_path] || cfg['dev_path']) : nil
-      env_key = "DN1SUP_#{id_s.upcase}_DEV_DIR"
-      roots = []
-      roots << hint.to_s unless hint.to_s.empty?
-      roots << ENV[env_key].to_s unless ENV[env_key].to_s.empty?
-      roots << ENV['DN1SUP_DEV_DIR'].to_s unless ENV['DN1SUP_DEV_DIR'].to_s.empty?
-      ext_root = ENV['SKETCHUP_EXT_ROOT'].to_s
-      roots << File.join(ext_root, id_s) unless ext_root.empty?
-      # Соседние папки относительно этого файла (менеджер и расширения лежат рядом)
-      %w[. .. ../.. ../../..].each do |rel|
-        roots << File.expand_path(File.join(File.dirname(__FILE__), rel, id_s))
-      end
-      roots.each do |dir|
-        next if dir.empty?
-        return dir if find_local_source(dir, id_s)
-      end
-      nil
-    end
-
-    # Версия расширения в папке разработки: сначала registry.json папки,
-    # fallback — ext.version лоадера / VERSION из main.rb. '' = не определена.
-    def local_dev_version(dev_dir, id)
-      src = find_local_source(dev_dir, id)
-      return '' unless src
-
-      root = File.dirname(src[:loader])
-      %w[registry.json ../registry.json ../../registry.json].each do |rel|
-        cand = File.expand_path(rel, root)
-        next unless File.file?(cand)
-
-        begin
-          require 'json'
-          parsed = JSON.parse(File.read(cand))
-          parsed = parsed['extensions'] if parsed.is_a?(Hash) && parsed['extensions'].is_a?(Array)
-          if parsed.is_a?(Array)
-            hit = parsed.find { |e| e.is_a?(Hash) && e['id'].to_s == id.to_s }
-            ver = hit ? hit['version'].to_s.sub(/\Av/i, '') : ''
-            return ver unless ver.empty?
-          end
-        rescue StandardError, ScriptError
-          next
-        end
-      end
-      extract_loader_version(src[:loader], src[:plugin_dir])
-    end
-
-    # Версия из лоадера (ext.version) или VERSION из main.rb.
-    def extract_loader_version(loader_path, plugin_dir)
-      if File.file?(loader_path)
-        begin
-          content = File.read(loader_path)
-          if content =~ /(?:extension|ext)\.version\s*=\s*['"]([^'"]+)['"]/i
-            return Regexp.last_match(1).to_s.sub(/\Av/i, '')
-          end
-        rescue StandardError
-          nil
-        end
-      end
-      main_rb = File.join(plugin_dir.to_s, 'main.rb')
-      main_rb = File.join(plugin_dir.to_s, "#{File.basename(plugin_dir.to_s)}.rb") unless File.file?(main_rb)
-      if File.file?(main_rb)
-        begin
-          content = File.read(main_rb)
-          if content =~ /VERSION\s*=\s*['"]([^'"]+)['"]/
-            return Regexp.last_match(1).to_s.sub(/\Av/i, '')
-          end
-        rescue StandardError
-          nil
-        end
-      end
+    def local_dev_version(_dev_dir, _id)
       ''
     end
 
-    # Сборка .rbz из папки разработки во временный файл. Возвращает путь
-    # или nil (нет zip-средств — вызывающая сторона ставит копированием).
-    def build_local_rbz(dev_dir, id, dest_path = nil)
-      require 'fileutils'
-      require 'tmpdir'
-      src = find_local_source(dev_dir, id)
-      return nil unless src
-
-      dest_path ||= File.join(temp_dir, "#{id}.rbz")
-      FileUtils.rm_f(dest_path)
-      ok = false
-      Dir.mktmpdir do |tmp|
-        stage = File.join(tmp, 'stage')
-        FileUtils.mkdir_p(stage)
-        FileUtils.cp(src[:loader], File.join(stage, "#{id}.rb"))
-        FileUtils.cp_r(src[:plugin_dir], File.join(stage, id.to_s))
-        staged_plugin = File.join(stage, id.to_s)
-        # Актуальный dn1sup_updater.rb — из загруженного модуля, а не из dev-папки
-        begin
-          FileUtils.cp(__FILE__, File.join(staged_plugin, 'dn1sup_updater.rb')) if File.file?(__FILE__)
-        rescue StandardError
-          nil
-        end
-        LOCAL_RBZ_EXCLUDE_FILES.each { |f| FileUtils.rm_f(File.join(staged_plugin, f)) }
-        LOCAL_RBZ_EXCLUDE_DIRS.each { |d| FileUtils.rm_rf(File.join(staged_plugin, d)) }
-        ok = zip_dir(stage, dest_path)
-      end
-      ok && File.file?(dest_path) && File.size(dest_path) > 1024 ? dest_path : nil
-    rescue StandardError, ScriptError => e
-      log_error(e)
+    def local_dev_mtime(_dev_dir, _id)
       nil
     end
 
-    # Упаковка каталога в zip: системный zip, иначе rubyzip.
-    def zip_dir(stage, dest_path)
-      if system('zip', '-qr', dest_path, '.', chdir: stage)
-        return true
-      end
-      begin
-        require 'zip'
-      rescue LoadError
-        return false
-      end
-      prefix = "#{stage}/".gsub('\\', '/')
-      Zip::File.open(dest_path, create: true) do |zipfile|
-        Dir["#{prefix}**/*"].each do |path|
-          next if File.directory?(path)
-          zipfile.add(path.gsub('\\', '/').delete_prefix(prefix), path)
-        end
-      end
-      true
-    rescue StandardError, ScriptError => e
-      log_error(e)
-      false
-    end
-
-    # Установка из папки разработки: .rbz на лету через install_from_archive;
-    # без zip-средств — прямое копирование лоадера и папки в Plugins.
-    def install_from_local_dir(dev_dir, id, display_name = nil)
-      require 'fileutils'
-      what = display_name.to_s.empty? ? id.to_s : display_name.to_s
-      src = find_local_source(dev_dir, id)
-      unless src
-        log_debug("install_from_local_dir(#{what}): исходники не найдены в #{dev_dir}")
-        return false
-      end
-      rbz = build_local_rbz(dev_dir, id)
-      if rbz && rbz?(rbz)
-        begin
-          unless defined?(Sketchup) && Sketchup.respond_to?(:install_from_archive)
-            log_debug("install_from_local_dir(#{what}): install_from_archive недоступен")
-            return false
-          end
-          ok = begin
-            Sketchup.install_from_archive(rbz, false)
-          rescue StandardError => e
-            log_error(e)
-            false
-          end
-          log_debug("install_from_local_dir(#{what}): install_from_archive -> #{ok ? 'OK' : 'FAIL'}")
-          mark_installed(id) if ok && id
-          return ok
-        ensure
-          File.delete(rbz) if rbz && File.file?(rbz) rescue nil
-        end
-      end
-      copy_local_to_plugins(src, id, what)
-    end
-
-    # Запасной путь без zip: прямое копирование в Plugins (как DevUpdater).
-    def copy_local_to_plugins(src, id, what)
-      require 'fileutils'
-      return false unless defined?(Sketchup) && Sketchup.respond_to?(:find_support_file)
-
-      plugins_dir = Sketchup.find_support_file('Plugins')
-      return false unless plugins_dir && File.directory?(plugins_dir)
-
-      begin
-        FileUtils.cp(src[:loader], File.join(plugins_dir, "#{id}.rb"))
-        dst = File.join(plugins_dir, id.to_s)
-        FileUtils.mkdir_p(dst)
-        Dir.glob(File.join(src[:plugin_dir], '**', '*'), File::FNM_DOTMATCH).each do |entry|
-          rel = entry.sub("#{src[:plugin_dir]}/", '').tr('\\', '/')
-          next if rel == '.' || rel == '..'
-          next if LOCAL_RBZ_EXCLUDE_DIRS.any? { |d| rel == d || rel.start_with?("#{d}/") }
-          next if LOCAL_RBZ_EXCLUDE_FILES.include?(File.basename(rel))
-
-          dest = File.join(dst, rel)
-          if File.directory?(entry)
-            FileUtils.mkdir_p(dest)
-          else
-            FileUtils.mkdir_p(File.dirname(dest))
-            FileUtils.cp(entry, dest)
-          end
-        end
-        mark_installed(id) if id
-        log_debug("copy_local_to_plugins(#{what}): OK")
-        true
-      rescue StandardError => e
-        log_error(e)
-        false
-      end
-    end
-
-    # Время файла исходников локальной папки (unixtime) — для сравнения при
-    # равной версии: правки без бампа версии тоже считаются обновлением.
-    # Берётся max mtime лоадера и файлов папки плагина (исключая мусор,
-    # не попадающий в .rbz). nil = время неизвестно.
-    def local_dev_mtime(dev_dir, id)
-      src = find_local_source(dev_dir, id)
-      return nil unless src
-
-      times = []
-      begin
-        times << File.mtime(src[:loader]).to_i if src[:loader] && File.file?(src[:loader])
-      rescue StandardError
-        nil
-      end
-      begin
-        Dir.glob(File.join(src[:plugin_dir].to_s, '**', '*')).each do |entry|
-          begin
-            next unless File.file?(entry)
-
-            rel = entry.sub("#{src[:plugin_dir]}/", '').tr('\\', '/')
-            next if LOCAL_RBZ_EXCLUDE_DIRS.any? { |d| rel == d || rel.start_with?("#{d}/") }
-            next if LOCAL_RBZ_EXCLUDE_FILES.include?(File.basename(rel))
-
-            times << File.mtime(entry).to_i
-          rescue StandardError
-            next
-          end
-        end
-      rescue StandardError
-        nil
-      end
-      times.max
-    end
-
-    # Любую дату к unixtime: Time / Integer / строка ISO-8601 / nil -> Integer.
-    # Неизвестное/битое — 0 («время неизвестно»).
-    def to_unixtime(value)
-      return 0 if value.nil?
-      return value.to_i if value.is_a?(Numeric)
-      return value.to_i if value.is_a?(Time)
-
-      s = value.to_s.strip
-      return 0 if s.empty?
-      return s.to_i if s =~ /\A\d+\z/
-
-      Time.parse(s).to_i
-    rescue StandardError, ArgumentError
-      0
-    end
-
-    # Источник свежее установленного? Номер версии выше — да; при равном
-    # номере — дата/время источника позже даты установки (переизпуск без
-    # бампа версии); при более низком номере, но более поздней дате — тоже
-    # да (смена схемы нумерации, зеркалит product_status 'switch').
-    # Без даты установки — только по номеру версии (как раньше).
-    def source_fresher?(installed_norm, source_norm, installed_at_i, source_time_i)
-      return true if newer?(source_norm, installed_norm)
-      return false unless installed_at_i.to_i > 0 && source_time_i.to_i > installed_at_i.to_i
-
-      true
-    end
-
-    # Чистое сравнение трёх источников: :local / :github / :current / :unknown.
-    # Локаль и GitHub сравниваются между собой — ставится свежайший.
-    # Версии равны, а дата/время источника свежее даты установки
-    # (installed_at:, github_time:, local_time:) — тоже свежее, ставится
-    # источник с более поздней датой. Без дат — старое поведение (только
-    # номера версий). Даты молча игнорируются, когда установка неизвестна.
-    # opts — позиционный Hash опций ({ installed_at:, github_time:,
-    # local_time: }): так Ruby 2.7 упаковывает kwargs при вызове старого
-    # 3-аргументного метода, а также явный Hash от совместимых вызывающих.
-    # Приоритет — у явных kwargs.
-    def pick_freshest(installed_ver, local_ver, github_ver, opts = nil, installed_at: nil, github_time: nil, local_time: nil)
-      if opts.is_a?(Hash)
-        if installed_at.nil?
-          installed_at = opts[:installed_at] if opts.key?(:installed_at)
-          installed_at = opts['installed_at'] if installed_at.nil? && opts.key?('installed_at')
-        end
-        if github_time.nil?
-          github_time = opts[:github_time] if opts.key?(:github_time)
-          github_time = opts['github_time'] if github_time.nil? && opts.key?('github_time')
-        end
-        if local_time.nil?
-          local_time = opts[:local_time] if opts.key?(:local_time)
-          local_time = opts['local_time'] if local_time.nil? && opts.key?('local_time')
-        end
-      end
+    # Упрощённое сравнение без локального источника: предлагается только
+    # релиз GitHub с номером выше установленной версии. Сигнатура сохранена
+    # для старых вызывающих (менеджер передаёт опциональные даты).
+    def pick_freshest(installed_ver, _local_ver, github_ver, _opts = nil, installed_at: nil, github_time: nil, local_time: nil)
       inst = installed_ver.to_s.sub(/\Av/i, '')
-      loc = local_ver.to_s.sub(/\Av/i, '')
       gh = github_ver.to_s.sub(/\Av/i, '')
-      return :unknown if loc.empty? && gh.empty?
+      return :unknown if gh.empty?
 
-      inst_at_i = to_unixtime(installed_at)
-      gh_t_i = to_unixtime(github_time)
-      loc_t_i = to_unixtime(local_time)
-
-      if inst.empty?
-        return :github if loc.empty?
-        return :local if gh.empty?
-
-        return newer?(norm_version(loc), norm_version(gh)) ? :local : :github
-      end
-
-      inst_n = norm_version(inst)
-      loc_fresh = loc.empty? ? false : source_fresher?(inst_n, norm_version(loc), inst_at_i, loc_t_i)
-      gh_fresh = gh.empty? ? false : source_fresher?(inst_n, norm_version(gh), inst_at_i, gh_t_i)
-      # Равная версия без известной даты установки — не свежее (как раньше).
-      loc_fresh = false if !loc.empty? && loc == inst && !(newer?(norm_version(loc), inst_n)) && inst_at_i <= 0
-      gh_fresh = false if !gh.empty? && gh == inst && !(newer?(norm_version(gh), inst_n)) && inst_at_i <= 0
-      return :current unless loc_fresh || gh_fresh
-      return :local if loc_fresh && !gh_fresh
-      return :github if gh_fresh && !loc_fresh
-
-      loc_n = norm_version(loc)
-      gh_n = norm_version(gh)
-      return :local if newer?(loc_n, gh_n)
-      return :github if newer?(gh_n, loc_n)
-
-      # Версии равны и оба свежее по дате — ставим источник с более поздней
-      # датой; при равных датах — локаль (правки разработчика приоритетнее).
-      loc_t_i >= gh_t_i ? :local : :github
+      newer?(norm_version(gh), norm_version(inst)) ? :github : :current
     end
 
-    # Проверка обновления с приоритетом локальной папки (кнопка «круг со
-    # стрелками» в шапке расширения). Папки нет — обычная проверка GitHub.
-    # Никогда не бросает исключений наружу.
-    def check_local_first!(cfg)
-      id_str = (cfg[:id] || cfg['id']).to_s
-      return nil if @checking[id_str]
-      return nil if dev_source?
-
-      @checking[id_str] = true
-      force  = !!(cfg[:force] || cfg['force'])
-      silent = !!(cfg[:silent] || cfg['silent'])
-      async  = !!(cfg[:async] || cfg['async']) && async_ui?
-
-      unless force || throttle_ok?(id_str)
-        @checking[id_str] = false
-        return nil
-      end
-
-      work = lambda do
-        dev_dir = begin
-          resolve_dev_dir(cfg)
-        rescue StandardError, ScriptError => e
-          log_error(e)
-          nil
-        end
-        local_ver = dev_dir ? local_dev_version(dev_dir, id_str) : ''
-        local_mtime = dev_dir ? local_dev_mtime(dev_dir, id_str) : nil
-        { dev_dir: dev_dir, local_ver: local_ver, local_mtime: local_mtime, fetched: fetch_latest(cfg) }
-      end
-      done = lambda do |res|
-        result = nil
-        begin
-          result = apply_local_check(cfg, res, force: force, silent: silent)
-        rescue StandardError, ScriptError => e
-          log_error(e)
-        ensure
-          @checking[id_str] = false
-        end
-        result
-      end
-
-      if async
-        defer_async(work, done)
-        nil
-      else
-        done.call(work.call)
-      end
-    end
-
-    # UI-часть проверки с локальным источником (главный поток).
-    def apply_local_check(cfg, res, force: false, silent: false)
-      id_str = (cfg[:id] || cfg['id']).to_s
-      res = {} unless res.is_a?(Hash)
-      local_ver = res[:local_ver].to_s.sub(/\Av/i, '')
-      dev_dir = res[:dev_dir]
-      fetched = res[:fetched]
-      current = (cfg[:version] || cfg['version']).to_s.sub(/\Av/i, '')
-
-      github_ver = ''
-      github_time = nil
-      if fetched.is_a?(Hash)
-        github_ver = fetched[:latest].to_s.sub(/\Av/i, '')
-        github_ver = fetched[:release]['tag_name'].to_s.sub(/\Av/i, '') if github_ver.empty? && fetched[:release].is_a?(Hash)
-        github_time = release_time(fetched[:release]) if fetched[:release].is_a?(Hash)
-      end
-
-      pick = pick_freshest(current, local_ver, github_ver,
-                           installed_at: installed_at(id_str),
-                           github_time: github_time,
-                           local_time: res[:local_mtime] || res['local_mtime'])
-      mark_checked(id_str)
-      case pick
-      when :local
-        fresh_note = if !local_ver.empty? && local_ver == current
-                       "Локальная папка разработки (#{dev_dir}): файлы новее установленной сборки #{current}."
-                     else
-                       "Локальная папка разработки (#{dev_dir}): версия #{local_ver} свежее установленной #{current}."
-                     end
-        summary = {
-          id: id_str, latest: local_ver, current: current,
-          notes: fresh_note,
-          page_url: '', asset_url: '', source: 'local', dev_dir: dev_dir.to_s
-        }
-        offer_local_install(summary, background: !force) unless silent
-        summary
-      when :github
-        summary = apply_check(cfg, fetched, force: force, silent: true)
-        if summary.is_a?(Hash)
-          summary[:source] = 'github'
-          offer_install(summary, background: !force) unless silent
-        elsif force && !silent
-          inform("#{id_str}: не удалось проверить релизы на GitHub.\n" \
-                 'Проверьте соединение с интернетом или настройки репозитория.')
-        end
-        summary
-      when :current
-        inform("#{id_str}: у вас уже установлена актуальная версия (#{current}).") if force && !silent
-        nil
-      else
-        inform("#{id_str}: не удалось проверить обновления — нет ни локальной папки, ни релизов на GitHub.") if force && !silent
-        nil
-      end
-    end
-
-    # Диалог установки из локальной папки (YES/NO) — по явному запросу.
-    # Фоновый вызов — ненавязчивое уведомление вместо модалки.
-    def offer_local_install(summary, background: false)
-      return nil if background && notify_background(summary)
-
-      msg = "#{summary[:id]}: доступна локальная версия #{summary[:latest]} " \
-            "(у вас #{summary[:current]}).\n" \
-            "\n#{short_notes(summary[:notes])}\n" \
-            "\nСобрать .rbz из локальной папки и установить сейчас?"
-      return unless ask(msg)
-
-      install_from_local_dir(summary[:dev_dir], summary[:id], summary[:id])
+    # Установка из локальной папки больше не поддерживается.
+    def install_from_local_dir(_dev_dir, _id, _display_name = nil)
+      false
     end
 
     # --- internals ---------------------------------------------------------

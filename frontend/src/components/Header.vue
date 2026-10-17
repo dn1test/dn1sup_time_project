@@ -46,11 +46,11 @@
         {{ locale === 'ru' ? 'EN' : 'RU' }}
       </button>
 
-      <!-- Проверить обновление: сначала локальная папка, потом GitHub -->
+      <!-- Проверить обновление на GitHub -->
       <button
         type="button"
         class="p-1.5 rounded-full text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-        title="Проверить обновление: сначала локальная папка разработки, потом GitHub"
+        title="Проверить обновление (GitHub)"
         @click="$emit('check-update')"
       >
         <RotateCw :size="15" />
