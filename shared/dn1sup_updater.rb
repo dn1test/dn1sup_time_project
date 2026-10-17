@@ -18,12 +18,31 @@ require 'time'
 #   Dn1sup::Updater.check!(MANIFEST.merge(force: true))             # по кнопке «Проверить обновления»
 #   Dn1sup::Updater.check!(MANIFEST.merge(silent: true))            # без UI (сервисные вызовы, тесты)
 #
+# Проверка и установка — только с GitHub (GitHub Releases + registry.json).
+# Локальные источники обновления (папка разработки, сборка .rbz на лету)
+# удалены; для менеджеров старых версий оставлены заглушки совместимости.
+#
+# Прогресс для HtmlDialog: передайте в cfg proc status_cb — апдейтер зовёт
+# его на главном потоке на каждом этапе:
+#   { stage: 'checking' }                              — запрос к GitHub ушёл
+#   { stage: 'found', latest:, current: }               — есть что ставить
+#   { stage: 'downloading', percent:, received:, total: } — скачивание .rbz
+#   { stage: 'installing' }                             — установка архива
+#   { stage: 'done', latest:, current: }                — установлено
+#   { stage: 'current', current: }                      — уже актуально
+#   { stage: 'dismissed' }                              — пользователь отказался
+#   { stage: 'error', message:, code: }                 — сеть/установка упала;
+#     code 'github_unreachable' — GitHub не отвечает (проверьте позднее),
+#     code 'dev_copy' — рабочая копия, проверка GitHub отключена
+# При переданном status_cb нативные messagebox для промежуточных/конечных
+# состояний не показываются (диалог сам показывает тосты); вопрос
+# «скачать и установить сейчас?» остаётся нативным ask.
+#
 # MANIFEST = { id: 'my_extension', repo: 'owner/repo', version: '1.2.3', asset: 'my_extension.rbz' }
 #
-# Обновление — ТОЛЬКО через GitHub Releases. Актуальная версия расширения
-# берётся из registry.json репозитория (поле version конкретного расширения);
-# тег релиза — fallback при недоступном реестре. Сетевые запросы выполняются
-# в фоновом потоке, UI — на главном.
+# Актуальная версия расширения берётся из registry.json репозитория (поле version
+# конкретного расширения); общий тег релиза монорепо — fallback при недоступном
+# реестре. Сетевые запросы выполняются в фоновом потоке, UI — на главном.
 module Dn1sup
   module Updater
     module_function
@@ -47,40 +66,70 @@ module Dn1sup
     # Методы при этом обратно совместимы (позиционный Hash опций + kwargs),
     # чтобы старые и новые копии не роняли друг друга с
     # "wrong number of arguments (given 4, expected 3)".
-    UPDATER_VERSION = 3 unless defined?(UPDATER_VERSION) && UPDATER_VERSION.to_i >= 3
+    # v4: только GitHub + status_cb с прогрессом для HtmlDialog.
+    # v5: локальные источники обновления удалены (заглушки совместимости);
+    # единая копия для всех расширений вместо веток v3/v4.
+    UPDATER_VERSION = 5 unless defined?(UPDATER_VERSION) && UPDATER_VERSION.to_i >= 5
+
+    # Причина, по которой рабочая копия не проверяет GitHub (текст для UI):
+    # обновления такой копии идут через reload из рабочей папки.
+    DEV_COPY_REASON = 'Это рабочая копия из папки разработки: обновления ' \
+                      'подтягиваются через reload из рабочей папки, ' \
+                      'а проверка GitHub для неё отключена.' unless defined?(DEV_COPY_REASON)
 
     @checking ||= {}
     @registry_cache ||= {}
+    @last_fetch_error ||= nil
 
     # --- public ------------------------------------------------------------
 
-    # Проверяет обновление. Никогда не бросает исключений наружу.
+    # Проверяет обновление только с GitHub. Никогда не бросает исключений наружу.
     # Синхронно возвращает Hash-сводку, если есть более свежая версия, иначе nil.
     # При async: true внутри живого SketchUp сеть уходит в фоновый поток,
     # UI показывается по готовности на главном потоке — метод сразу возвращает nil.
+    # cfg[:status_cb] (proc) — этапы проверки/установки для HtmlDialog
+    # (см. шапку файла); вызывается всегда на главном потоке.
     def check!(cfg)
       id_str = cfg[:id].to_s
-      return nil if @checking[id_str]
-      return nil if dev_source?
+      status_cb = status_cb_of(cfg)
+      silent = !!(cfg[:silent] || cfg['silent'])
+      if @checking[id_str]
+        # Повторное нажатие во время проверки: спиннер в диалоге уже крутится,
+        # подтверждаем stage, чтобы UI не завис без ответа.
+        emit_status(status_cb, { stage: 'checking', id: id_str }) if status_cb && !silent
+        return nil
+      end
+      if dev_source?
+        # Рабочая копия разработки: обновления идут через reload из рабочей
+        # папки, а не с GitHub. Молчаливый возврат вешал спиннер кнопки
+        # в диалоге навсегда — отдаём явный завершающий stage.
+        if status_cb && !silent
+          emit_status(status_cb, { stage: 'error', id: id_str, code: 'dev_copy',
+                                              message: DEV_COPY_REASON })
+        end
+        return nil
+      end
 
       @checking[id_str] = true
 
-      force  = !!cfg[:force]
-      silent = !!cfg[:silent]
-      async  = !!cfg[:async] && async_ui?
+      force  = !!(cfg[:force] || cfg['force'])
+      async  = !!(cfg[:async] || cfg['async']) && async_ui?
 
       unless force || throttle_ok?(id_str)
         @checking[id_str] = false
         return nil
       end
 
+      emit_status(status_cb, { stage: 'checking', id: id_str })
       work = -> { fetch_latest(cfg) }
       done = lambda do |fetched|
         result = nil
         begin
-          result = apply_check(cfg, fetched, force: force, silent: silent)
+          result = apply_check(cfg, fetched, force: force, silent: silent,
+                                              fetch_error: last_fetch_error)
         rescue StandardError, ScriptError => e
           log_error(e)
+          emit_status(status_cb, { stage: 'error', id: id_str, message: e.message.to_s })
         ensure
           @checking[id_str] = false
         end
@@ -106,14 +155,46 @@ module Dn1sup
       false
     end
 
+    # Proc прогресса из cfg (:status_cb / 'status_cb', фолбэк :on_status).
+    # nil — обычный режим с нативными messagebox.
+    def status_cb_of(cfg)
+      return nil unless cfg.is_a?(Hash)
+
+      cb = cfg[:status_cb] || cfg['status_cb'] || cfg[:on_status] || cfg['on_status']
+      cb.respond_to?(:call) ? cb : nil
+    end
+
+    # Безопасный вызов прогресса: никогда не бросает исключений наружу.
+    def emit_status(cb, payload)
+      return unless cb.respond_to?(:call)
+      return unless payload.is_a?(Hash)
+
+      begin
+        cb.call(payload)
+      rescue StandardError, ScriptError => e
+        log_error(e)
+      end
+    end
+
     # GET https://api.github.com/repos/{owner}/{repo}/releases/latest
     # Возвращает Hash JSON или {} при любой ошибке (сеть, лимиты и т.п.).
+    # Причина недоступности запоминается в last_fetch_error, чтобы проверка
+    # могла честно сказать «GitHub не отвечает, проверьте позднее» вместо
+    # молчания или ложного «обновлений нет».
     def latest_release(repo)
       require 'net/http'
       require 'json'
+      @last_fetch_error = nil
       uri = URI.parse("#{GITHUB_API}/repos/#{repo}/releases/latest")
       res = http_get(uri)
       unless res.is_a?(Net::HTTPSuccess)
+        code = res.respond_to?(:code) ? res.code.to_i : 0
+        if code == 403 || code == 429
+          @last_fetch_error = { kind: 'rate_limit', code: code,
+                                retry_after: rate_limit_retry_after(res) }
+        else
+          @last_fetch_error = { kind: 'http', code: code }
+        end
         log_debug("latest_release(#{repo}): HTTP #{res.respond_to?(:code) ? res.code : '?'}")
         return {}
       end
@@ -121,8 +202,51 @@ module Dn1sup
       log_debug("latest_release(#{repo}): OK #{json['tag_name'].to_s}")
       json
     rescue StandardError, ScriptError => e
+      @last_fetch_error = { kind: 'network' }
       log_error(e)
       {}
+    end
+
+    # Причина последней недоступности GitHub API
+    # ({ kind: 'rate_limit'/'network'/'http', code:, retry_after: } в минутах)
+    # или nil, если последний запрос релиза прошёл успешно.
+    def last_fetch_error
+      err = @last_fetch_error
+      err.is_a?(Hash) ? err : nil
+    end
+
+    # Минут до сброса лимита GitHub API по заголовку x-ratelimit-reset.
+    # nil, если заголовка нет или срок уже прошёл.
+    def rate_limit_retry_after(res)
+      reset = res.respond_to?(:[]) ? res['x-ratelimit-reset'].to_s : ''
+      return nil unless reset =~ /\A\d+\z/
+
+      secs = reset.to_i - Time.now.to_i
+      return nil unless secs > 0
+
+      (secs / 60) + 1
+    rescue StandardError
+      nil
+    end
+
+    # Короткая причина недоступности GitHub (без «проверьте позднее» —
+    # этот призыв добавляет вызывающая сторона на своём языке).
+    def github_unreachable_reason(err = nil)
+      err = last_fetch_error if err.nil?
+      err = {} unless err.is_a?(Hash)
+      case err[:kind].to_s
+      when 'rate_limit'
+        mins = err[:retry_after].to_i
+        base = 'превышен лимит запросов к GitHub API'
+        mins > 0 ? "#{base} (повторите примерно через #{mins} мин.)" : base
+      when 'network'
+        'нет соединения с GitHub'
+      when 'http'
+        code = err[:code].to_i
+        code > 0 ? "GitHub вернул ошибку HTTP #{code}" : 'GitHub вернул ошибку'
+      else
+        'релиз на GitHub недоступен'
+      end
     end
 
     # GET https://api.github.com/repos/{owner}/{repo}/releases?per_page=N
@@ -259,14 +383,87 @@ module Dn1sup
     end
 
     # Скачивает файл во временную папку и возвращает путь (nil при ошибке).
-    def download_to_temp(url)
+    # progress — опциональный lambda (received_bytes, total_bytes) для
+    # отображения процесса (при нём качает потоково с Content-Length).
+    def download_to_temp(url, progress = nil)
       filename = File.basename(URI.parse(url).path.to_s)
       filename = 'download.rbz' if filename.to_s.empty?
       path = File.join(temp_dir, filename)
-      download(url, path)
+      if progress.respond_to?(:call)
+        download_with_progress(url, path, progress)
+      else
+        download(url, path)
+      end
     rescue StandardError, ScriptError => e
       log_error(e)
       nil
+    end
+
+    # Потоковое скачивание с прогрессом: progress.call(received, total)
+    # на каждом чанке. Редиректы (GitHub-архивы) проходит сам.
+    # Возвращает путь или nil.
+    def download_with_progress(url, dest_path, progress = nil)
+      require 'net/http'
+      require 'uri'
+      uri = URI.parse(url.to_s)
+      redirects_left = 5
+      loop do
+        outcome = nil
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl      = (uri.scheme == 'https')
+        http.open_timeout = 4
+        http.read_timeout = 60
+        req = Net::HTTP::Get.new(uri.request_uri, HEADERS)
+        http.request(req) do |res|
+          case res
+          when Net::HTTPRedirection
+            location = res['location'].to_s
+            if location.empty? || redirects_left <= 0
+              log_error(RuntimeError.new("HTTP-редирект без location при скачивании #{url}"))
+              outcome = :fail
+            else
+              redirects_left -= 1
+              uri = URI.join(uri.to_s, location)
+              outcome = :redirect
+            end
+          when Net::HTTPSuccess
+            total = res['content-length'].to_i
+            received = 0
+            begin
+              File.open(dest_path, 'wb') do |f|
+                res.read_body do |chunk|
+                  f.write(chunk)
+                  received += chunk.bytesize
+                  begin
+                    progress.call(received, total) if progress.respond_to?(:call)
+                  rescue StandardError, ScriptError
+                    nil
+                  end
+                end
+              end
+              outcome = (File.file?(dest_path) && File.size(dest_path) > 200) ? :ok : :fail
+            rescue StandardError, ScriptError => e
+              log_error(e)
+              outcome = :fail
+            end
+          else
+            code = res.respond_to?(:code) ? res.code : 'unknown'
+            log_error(RuntimeError.new("HTTP #{code} при скачивании #{url}"))
+            outcome = :fail
+          end
+        end
+        case outcome
+        when :ok
+          return dest_path
+        when :redirect
+          next
+        else
+          return nil
+        end
+      rescue StandardError, ScriptError => e
+        log_error(e)
+        return nil
+      end
     end
 
     # Загружает текст по URL (для JSON-реестров и т.п.). nil при ошибке.
@@ -403,11 +600,16 @@ module Dn1sup
     # релизы без бампа версии.
     # opts — позиционный Hash опций ({ id: ... }): совместимость со старыми
     # вызывающими и упаковкой kwargs на Ruby 2.7. Приоритет — у явного kwargs.
-    def install_from_url(url, what = 'расширение', silent = false, opts = nil, id: nil)
-      if id.nil? && opts.is_a?(Hash)
-        id = opts[:id] if opts.key?(:id)
-        id = opts['id'] if id.nil? && opts.key?('id')
+    # status_cb (там же или kwarg) — этапы для HtmlDialog: downloading
+    # (percent), installing, done/error. При нём конечные нативные messagebox
+    # не показываются — итог рисует диалог.
+    def install_from_url(url, what = 'расширение', silent = false, opts = nil, id: nil, progress: nil, status_cb: nil)
+      if opts.is_a?(Hash)
+        id ||= opts[:id] || opts['id'] if opts.key?(:id) || opts.key?('id')
+        progress ||= opts[:progress] || opts['progress']
+        status_cb ||= opts[:status_cb] || opts['status_cb'] || opts[:on_status] || opts['on_status']
       end
+      status_cb = nil unless status_cb.respond_to?(:call)
       url = url.to_s
       if url.empty?
         log_debug("install_from_url(#{what}): пустой URL — отмена")
@@ -416,21 +618,41 @@ module Dn1sup
       unless defined?(Sketchup) && Sketchup.respond_to?(:install_from_archive)
         log_debug("install_from_url(#{what}): install_from_archive недоступен")
         inform("#{what}: Sketchup.install_from_archive недоступен в этой версии SketchUp.") unless silent
+        emit_status(status_cb, { stage: 'error', id: id, message: 'install_from_archive недоступен' })
         return false
       end
       log_debug("install_from_url(#{what}): скачивание #{url}")
-      path = download_to_temp(url)
+      emit_status(status_cb, { stage: 'downloading', id: id, percent: 0 })
+      chunk_cb = nil
+      if status_cb
+        last_pct = -1
+        chunk_cb = lambda do |received, total|
+          pct = total.to_i > 0 ? (received.to_f / total * 100).round : 0
+          pct = 0 if pct < 0
+          pct = 100 if pct > 100
+          if pct >= last_pct + 5 || pct >= 100
+            last_pct = pct
+            emit_status(status_cb, { stage: 'downloading', id: id, percent: pct, received: received, total: total })
+          end
+        end
+      elsif progress.respond_to?(:call)
+        chunk_cb = progress
+      end
+      path = chunk_cb ? download_with_progress(url, File.join(temp_dir, File.basename(URI.parse(url).path.to_s).then { |n| n.empty? ? 'download.rbz' : n }), chunk_cb) : download_to_temp(url)
       unless path
         log_debug("install_from_url(#{what}): скачивание не удалось")
         inform("#{what}: не удалось скачать обновление.\n" \
-               'Проверьте соединение или скачайте .rbz вручную со страницы релиза.') unless silent
+               'Проверьте соединение или скачайте .rbz вручную со страницы релиза.') unless silent || status_cb
+        emit_status(status_cb, { stage: 'error', id: id, message: 'не удалось скачать обновление' })
         return false
       end
       unless rbz?(path)
         log_debug("install_from_url(#{what}): файл #{File.basename(path)} не похож на .rbz")
-        inform("#{what}: скачанный файл не похож на .rbz — вероятно, ошибка сети. Попробуйте позже.") unless silent
+        inform("#{what}: скачанный файл не похож на .rbz — вероятно, ошибка сети. Попробуйте позже.") unless silent || status_cb
+        emit_status(status_cb, { stage: 'error', id: id, message: 'скачанный файл не похож на .rbz' })
         return false
       end
+      emit_status(status_cb, { stage: 'installing', id: id, percent: 100 })
       ok = begin
         # false = без собственного диалога SketchUp: итог покажет вызывающая сторона
         Sketchup.install_from_archive(path, false)
@@ -442,32 +664,31 @@ module Dn1sup
       if ok
         mark_installed(id) if id
         inform("#{what}: обновление установлено.\n\n" \
-               'Перезапустите SketchUp, чтобы новый код загрузился.') unless silent
+               'Перезапустите SketchUp, чтобы новый код загрузился.') unless silent || status_cb
+        emit_status(status_cb, { stage: 'done', id: id })
       else
-        inform("#{what}: SketchUp не удалось установить архив. Скачайте .rbz вручную с GitHub.") unless silent
+        inform("#{what}: SketchUp не удалось установить архив. Скачайте .rbz вручную с GitHub.") unless silent || status_cb
+        emit_status(status_cb, { stage: 'error', id: id, message: 'SketchUp не удалось установить архив' })
       end
       ok
     ensure
       File.delete(path) if path && File.file?(path) rescue nil
     end
 
-    # --- совместимость: локальный источник обновлений удалён ----------------
+    # --- совместимость с Extension Store ------------------------------------
     #
-    # Раньше здесь была проверка локальной папки разработки с приоритетом над
-    # GitHub (check_local_first! → apply_local_check → install_from_local_dir).
-    # Обновление теперь идёт ТОЛЬКО через GitHub Releases. Методы оставлены
-    # как заглушки: модуль Dn1sup::Updater в памяти SketchUp один на все
-    # расширения DN1Sup (методы побеждает последняя загруженная копия), а
-    # меню/таймеры соседних расширений и Store менеджера зовут их по имени.
-    # Заглушки дают таким вызывающим GitHub-поведение вместо NoMethodError.
+    # Обновление — только из GitHub Releases: локальные источники (папка
+    # разработки, ENV-переменные, сборка .rbz на лету, копирование в Plugins)
+    # удалены. Менеджер расширений старых версий вызывает перечисленные ниже
+    # методы без защиты respond_to? — оставляем заглушки «локального
+    # источника нет», чтобы каталог менеджера не падал.
 
-    # Бывшая точка входа «сначала локальная папка, потом GitHub». Локального
-    # источника больше нет — работает как check! (только GitHub).
+    # Раньше — проверка с приоритетом локальной папки; теперь обычная
+    # GitHub-проверка (тот же код, что и check!).
     def check_local_first!(cfg)
       check!(cfg)
     end
 
-    # Локальная папка разработки не используется: источника нет.
     def resolve_dev_dir(_cfg)
       nil
     end
@@ -480,20 +701,98 @@ module Dn1sup
       nil
     end
 
-    # Упрощённое сравнение без локального источника: предлагается только
-    # релиз GitHub с номером выше установленной версии. Сигнатура сохранена
-    # для старых вызывающих (менеджер передаёт опциональные даты).
-    def pick_freshest(installed_ver, _local_ver, github_ver, _opts = nil, installed_at: nil, github_time: nil, local_time: nil)
-      inst = installed_ver.to_s.sub(/\Av/i, '')
-      gh = github_ver.to_s.sub(/\Av/i, '')
-      return :unknown if gh.empty?
-
-      newer?(norm_version(gh), norm_version(inst)) ? :github : :current
+    def install_from_local_dir(_dev_dir, _id, _display_name = nil)
+      log_debug('install_from_local_dir: локальные источники удалены — обновление только из GitHub')
+      false
     end
 
-    # Установка из локальной папки больше не поддерживается.
-    def install_from_local_dir(_dev_dir, _id, _display_name = nil)
-      false
+    # Любую дату к unixtime: Time / Integer / строка ISO-8601 / nil -> Integer.
+    # Неизвестное/битое — 0 («время неизвестно»).
+    def to_unixtime(value)
+      return 0 if value.nil?
+      return value.to_i if value.is_a?(Numeric)
+      return value.to_i if value.is_a?(Time)
+
+      s = value.to_s.strip
+      return 0 if s.empty?
+      return s.to_i if s =~ /\A\d+\z/
+
+      Time.parse(s).to_i
+    rescue StandardError, ArgumentError
+      0
+    end
+
+    # Источник свежее установленного? Номер версии выше — да; при равном
+    # номере — дата/время источника позже даты установки (переизпуск без
+    # бампа версии); при более низком номере, но более поздней дате — тоже
+    # да (смена схемы нумерации, зеркалит product_status 'switch').
+    # Без даты установки — только по номеру версии (как раньше).
+    def source_fresher?(installed_norm, source_norm, installed_at_i, source_time_i)
+      return true if newer?(source_norm, installed_norm)
+      return false unless installed_at_i.to_i > 0 && source_time_i.to_i > installed_at_i.to_i
+
+      true
+    end
+
+    # Чистое сравнение трёх источников: :local / :github / :current / :unknown.
+    # Локаль и GitHub сравниваются между собой — ставится свежайший.
+    # Версии равны, а дата/время источника свежее даты установки
+    # (installed_at:, github_time:, local_time:) — тоже свежее, ставится
+    # источник с более поздней датой. Без дат — старое поведение (только
+    # номера версий). Даты молча игнорируются, когда установка неизвестна.
+    # opts — позиционный Hash опций ({ installed_at:, github_time:,
+    # local_time: }): так Ruby 2.7 упаковывает kwargs при вызове старого
+    # 3-аргументного метода, а также явный Hash от совместимых вызывающих.
+    # Приоритет — у явных kwargs.
+    def pick_freshest(installed_ver, local_ver, github_ver, opts = nil, installed_at: nil, github_time: nil, local_time: nil)
+      if opts.is_a?(Hash)
+        if installed_at.nil?
+          installed_at = opts[:installed_at] if opts.key?(:installed_at)
+          installed_at = opts['installed_at'] if installed_at.nil? && opts.key?('installed_at')
+        end
+        if github_time.nil?
+          github_time = opts[:github_time] if opts.key?(:github_time)
+          github_time = opts['github_time'] if github_time.nil? && opts.key?('github_time')
+        end
+        if local_time.nil?
+          local_time = opts[:local_time] if opts.key?(:local_time)
+          local_time = opts['local_time'] if local_time.nil? && opts.key?('local_time')
+        end
+      end
+      inst = installed_ver.to_s.sub(/\Av/i, '')
+      loc = local_ver.to_s.sub(/\Av/i, '')
+      gh = github_ver.to_s.sub(/\Av/i, '')
+      return :unknown if loc.empty? && gh.empty?
+
+      inst_at_i = to_unixtime(installed_at)
+      gh_t_i = to_unixtime(github_time)
+      loc_t_i = to_unixtime(local_time)
+
+      if inst.empty?
+        return :github if loc.empty?
+        return :local if gh.empty?
+
+        return newer?(norm_version(loc), norm_version(gh)) ? :local : :github
+      end
+
+      inst_n = norm_version(inst)
+      loc_fresh = loc.empty? ? false : source_fresher?(inst_n, norm_version(loc), inst_at_i, loc_t_i)
+      gh_fresh = gh.empty? ? false : source_fresher?(inst_n, norm_version(gh), inst_at_i, gh_t_i)
+      # Равная версия без известной даты установки — не свежее (как раньше).
+      loc_fresh = false if !loc.empty? && loc == inst && !(newer?(norm_version(loc), inst_n)) && inst_at_i <= 0
+      gh_fresh = false if !gh.empty? && gh == inst && !(newer?(norm_version(gh), inst_n)) && inst_at_i <= 0
+      return :current unless loc_fresh || gh_fresh
+      return :local if loc_fresh && !gh_fresh
+      return :github if gh_fresh && !loc_fresh
+
+      loc_n = norm_version(loc)
+      gh_n = norm_version(gh)
+      return :local if newer?(loc_n, gh_n)
+      return :github if newer?(gh_n, loc_n)
+
+      # Версии равны и оба свежее по дате — ставим источник с более поздней
+      # датой; при равных датах — локаль (правки разработчика приоритетнее).
+      loc_t_i >= gh_t_i ? :local : :github
     end
 
     # --- internals ---------------------------------------------------------
@@ -518,11 +817,22 @@ module Dn1sup
     end
 
     # UI-часть проверки (главный поток). Возвращает summary или nil.
-    def apply_check(cfg, fetched, force: false, silent: false)
+    # При cfg[:status_cb] конечные состояния («актуально» / «сеть упала»)
+    # отдаются в диалог этапами current/error без нативных messagebox.
+    # Недоступность GitHub — всегда явный error «не отвечает, проверьте
+    # позднее», никогда молчание и никогда ложное «обновлений нет».
+    def apply_check(cfg, fetched, force: false, silent: false, fetch_error: nil)
       id_str = cfg[:id].to_s
+      status_cb = status_cb_of(cfg)
       unless fetched
-        inform("#{id_str}: не удалось проверить релизы на GitHub.\n" \
-               'Проверьте соединение с интернетом или настройки репозитория.') if force && !silent
+        reason = github_unreachable_reason(fetch_error)
+        if force && !silent && status_cb.nil?
+          inform("#{id_str}: GitHub не отвечает (#{reason}). Проверьте позднее.")
+        end
+        if force && !silent && status_cb
+          emit_status(status_cb, { stage: 'error', id: id_str, code: 'github_unreachable',
+                                                message: reason })
+        end
         return nil
       end
       mark_checked(id_str)
@@ -535,7 +845,10 @@ module Dn1sup
         # изданный позже установленной сборки (переизпуск без бампа версии,
         # смена схемы нумерации), тоже считается обновлением.
         unless release_newer_than_install?(cfg, fetched)
-          inform("#{id_str}: у вас уже установлена актуальная версия (#{cfg[:version]}).") if force && !silent
+          if force && !silent && status_cb.nil?
+            inform("#{id_str}: у вас уже установлена актуальная версия (#{cfg[:version]}).")
+          end
+          emit_status(status_cb, { stage: 'current', id: id_str, current: cfg[:version].to_s }) if force && !silent
           return nil
         end
         same_version = true
@@ -551,7 +864,9 @@ module Dn1sup
         asset_url: asset_url(release, cfg[:asset].to_s)
       }
       summary[:same_version] = true if same_version
-      offer_install(summary, background: !force) unless silent
+      summary[:source] = 'github'
+      emit_status(status_cb, { stage: 'found', id: id_str, latest: summary[:latest], current: summary[:current] })
+      offer_install(summary, background: !force, status_cb: status_cb) unless silent
       summary
     end
 
@@ -674,10 +989,11 @@ module Dn1sup
 
     # Фоновая (незапрошенная) проверка — ненавязчивое уведомление вместо модалки;
     # YES/NO-диалог остаётся для проверки по явному запросу (force).
-    def offer_install(summary, background: false)
+    # status_cb — этапы для HtmlDialog (прокидывается в offer_dialog).
+    def offer_install(summary, background: false, status_cb: nil)
       return nil if background && notify_background(summary)
 
-      offer_dialog(summary)
+      offer_dialog(summary, status_cb: status_cb)
     end
 
     # Уведомление в системном центре (SU2017+). false, если недоступно.
@@ -709,18 +1025,28 @@ module Dn1sup
     end
 
     # Диалог установки (YES/NO) — по явному запросу пользователя.
-    def offer_dialog(summary)
+    # При status_cb отказ пользователя отдаётся этапом dismissed, а процесс
+    # скачивания/установки — этапами downloading/installing/done/error.
+    def offer_dialog(summary, status_cb: nil)
+      status_cb = nil unless status_cb.respond_to?(:call)
       if summary[:asset_url].to_s.empty?
-        return unless ask("#{summary[:id]}: #{update_headline(summary)}" \
+        unless ask("#{summary[:id]}: #{update_headline(summary)}" \
                           'Открыть страницу релизов?')
+          emit_status(status_cb, { stage: 'dismissed', id: summary[:id] })
+          return
+        end
         open_url(summary[:page_url])
+        emit_status(status_cb, { stage: 'dismissed', id: summary[:id] })
         return
       end
       msg = "#{summary[:id]}: #{update_headline(summary)}" \
             "\n#{short_notes(summary[:notes])}\n" \
             "\nСкачать и установить обновление сейчас?"
-      return unless ask(msg)
-      install_from_url(summary[:asset_url], summary[:id], false, id: summary[:id])
+      unless ask(msg)
+        emit_status(status_cb, { stage: 'dismissed', id: summary[:id] })
+        return
+      end
+      install_from_url(summary[:asset_url], summary[:id], false, id: summary[:id], status_cb: status_cb)
     end
 
     # .rbz — это zip: начинается с "PK".
